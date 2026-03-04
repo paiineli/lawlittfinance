@@ -1,0 +1,180 @@
+@model CategoryListViewModel
+
+<main class="container-lg py-4">
+
+    <div class="d-flex align-items-center justify-content-between mb-3 flex-wrap gap-2">
+        <h5 class="fw-bold mb-0">Categorias</h5>
+        <button class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#createModal">
+            <i class="bi bi-plus-lg"></i> Nova categoria
+        </button>
+    </div>
+
+    <div class="d-flex flex-wrap align-items-center gap-2 mb-3">
+        <div class="filter-group">
+            <a href="@Url.Action("Index", new { search = Model.FilterSearch })"
+               class="filter-btn @(string.IsNullOrEmpty(Model.FilterType) ? "active" : "")">Todas</a>
+            <a href="@Url.Action("Index", new { type = "Expense", search = Model.FilterSearch })"
+               class="filter-btn @(Model.FilterType == "Expense" ? "active" : "")">Despesas</a>
+            <a href="@Url.Action("Index", new { type = "Income", search = Model.FilterSearch })"
+               class="filter-btn @(Model.FilterType == "Income" ? "active" : "")">Receitas</a>
+        </div>
+        <form method="get" asp-action="Index" class="d-flex gap-1 ms-auto">
+            @if (!string.IsNullOrEmpty(Model.FilterType))
+            {
+                <input type="hidden" name="type" value="@Model.FilterType">
+            }
+            <input type="search" name="search" class="form-control form-control-sm search-input"
+                   placeholder="Buscar..." value="@Model.FilterSearch">
+            <button type="submit" class="btn btn-sm btn-outline-secondary">
+                <i class="bi bi-search"></i>
+            </button>
+        </form>
+        @if (!string.IsNullOrEmpty(Model.FilterType) || !string.IsNullOrEmpty(Model.FilterSearch))
+        {
+            <a href="@Url.Action("Index")" class="btn btn-sm btn-outline-secondary">
+                <i class="bi bi-x-lg"></i> Limpar
+            </a>
+        }
+    </div>
+
+    <div class="card">
+        <div class="table-responsive">
+            <table class="table table-hover mb-0">
+                <thead>
+                    <tr>
+                        <th>Nome</th>
+                        <th class="cat-type-col">Tipo</th>
+                        <th class="col-actions"></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @if (!Model.Categories.Any())
+                    {
+                        <tr>
+                            <td colspan="3" class="text-center py-5 text-secondary">Nenhuma categoria encontrada.</td>
+                        </tr>
+                    }
+                    @foreach (var category in Model.Categories)
+                    {
+                        <tr>
+                            <td class="fw-medium">@category.Name</td>
+                            <td>
+                                <span class="@(category.Type == TransactionType.Income ? "badge-income" : "badge-expense")">
+                                    @(category.Type == TransactionType.Income ? "Receita" : "Despesa")
+                                </span>
+                            </td>
+                            <td>
+                                <div class="d-flex gap-1 justify-content-end">
+                                    <button class="btn btn-sm btn-outline-secondary py-0 px-1"
+                                            data-bs-toggle="modal" data-bs-target="#editModal-@category.Id">
+                                        <i class="bi bi-pencil"></i>
+                                    </button>
+                                    <button class="btn btn-sm btn-outline-danger py-0 px-1"
+                                            data-bs-toggle="modal" data-bs-target="#deleteModal-@category.Id">
+                                        <i class="bi bi-trash"></i>
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+</main>
+
+<div class="modal fade" id="createModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Nova categoria</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form method="post" asp-action="Create">
+                @Html.AntiForgeryToken()
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label small">Nome <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control" name="Name" maxlength="100"
+                               placeholder="Ex: Alimentação, Salário...">
+                    </div>
+                    <div class="mb-1">
+                        <label class="form-label small">Tipo</label>
+                        <select class="form-select" name="Type">
+                            <option value="Expense">Despesa</option>
+                            <option value="Income">Receita</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-primary">Criar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+@foreach (var category in Model.Categories)
+{
+    <div class="modal fade" id="editModal-@category.Id" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Editar categoria</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <form method="post" asp-action="Edit" asp-route-id="@category.Id">
+                    @Html.AntiForgeryToken()
+                    <div class="modal-body">
+                        <div class="mb-3">
+                            <label class="form-label small">Nome <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control" name="Name" maxlength="100" value="@category.Name">
+                        </div>
+                        <div class="mb-1">
+                            <label class="form-label small">Tipo</label>
+                            <select class="form-select" name="Type">
+                                <option value="Expense" selected="@(category.Type == TransactionType.Expense ? "selected" : null)">Despesa</option>
+                                <option value="Income" selected="@(category.Type == TransactionType.Income ? "selected" : null)">Receita</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
+                        <button type="submit" class="btn btn-primary">Salvar</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal fade" id="deleteModal-@category.Id" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered modal-sm">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h6 class="modal-title">Confirmar exclusão</h6>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body text-secondary small">
+                    <p class="mb-1">Tem certeza que deseja excluir esta categoria?</p>
+                    <div class="mt-2 p-2 rounded bg-body-tertiary">
+                        <p class="mb-1 fw-medium text-body">@category.Name</p>
+                        <p class="mb-0">
+                            <span class="@(category.Type == TransactionType.Income ? "badge-income" : "badge-expense")">
+                                @(category.Type == TransactionType.Income ? "Receita" : "Despesa")
+                            </span>
+                        </p>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-sm btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <form method="post" asp-action="Delete" asp-route-id="@category.Id">
+                        @Html.AntiForgeryToken()
+                        <button type="submit" class="btn btn-sm btn-danger">Excluir</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+}

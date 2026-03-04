@@ -1,0 +1,4 @@
+<Solution>
+  <Project Path="LawllitFinance.Data/LawllitFinance.Data.csproj" />
+  <Project Path="LawllitFinance.Web/LawllitFinance.Web.csproj" />
+</Solution>

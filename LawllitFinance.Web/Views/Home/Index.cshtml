@@ -1,0 +1,50 @@
+@{
+    ViewData["Title"] = "Controle financeiro pessoal";
+    ViewData["Description"] = "Controle suas receitas e despesas, acompanhe cotações de câmbio em tempo real e mantenha suas finanças organizadas com o lawllitfinance.";
+}
+
+<main class="flex-grow-1 d-flex flex-column">
+    <section class="landing-hero">
+        <div class="container-lg w-100">
+            <div class="row justify-content-center text-center">
+                <div class="col-lg-7 col-md-9">
+                    <h1 class="fw-bold landing-headline mb-3">
+                        <span id="typewriter-line1"></span><br>
+                        <span class="text-green" id="typewriter-line2"></span>
+                    </h1>
+                    <p class="text-secondary mb-4 landing-subtitle mx-auto">
+                        Controle suas receitas e despesas, saiba para onde seu dinheiro vai e mantenha seus dados só seus.
+                    </p>
+                    <div class="d-flex gap-2 justify-content-center flex-wrap">
+                        <a asp-controller="Auth" asp-action="Register" class="btn btn-primary px-4">
+                            Criar conta
+                        </a>
+                        <a asp-controller="Auth" asp-action="Login" class="btn btn-outline-secondary px-4">
+                            Entrar
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+</main>
+
+@section Scripts {
+    <script type="application/ld+json">
+    {
+        "@@context": "https://schema.org",
+        "@@type": "WebApplication",
+        "name": "lawllitfinance",
+        "description": "Controle financeiro pessoal com acompanhamento de receitas, despesas e cotações de câmbio em tempo real.",
+        "applicationCategory": "FinanceApplication",
+        "operatingSystem": "Web",
+        "offers": {
+            "@@type": "Offer",
+            "price": "0",
+            "priceCurrency": "BRL"
+        },
+        "inLanguage": "pt-BR"
+    }
+    </script>
+    <script src="~/js/home.js"></script>
+}

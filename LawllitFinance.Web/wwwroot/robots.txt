@@ -1,0 +1,11 @@
+User-agent: *
+Allow: /
+Allow: /Home
+Disallow: /Dashboard
+Disallow: /Transaction
+Disallow: /Category
+Disallow: /Quotes
+Disallow: /Profile
+Disallow: /Auth/Logout
+Disallow: /Auth/ForgotPassword
+Disallow: /Auth/ResetPassword

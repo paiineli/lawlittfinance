@@ -1,0 +1,321 @@
+@model ProfileViewModel
+@{
+    var culture = new System.Globalization.CultureInfo("pt-BR");
+}
+
+<main class="container-lg py-4">
+
+  <div class="mb-4">
+    <h5 class="fw-bold mb-0">Perfil</h5>
+  </div>
+
+  <div class="card mb-4">
+    <div class="card-body p-4">
+      <div class="d-flex align-items-center gap-3">
+        <div class="profile-avatar flex-shrink-0">@Model.Name.Substring(0, 1).ToUpper()</div>
+        <div>
+          <p class="fw-semibold mb-0">@Model.Name</p>
+          <p class="small text-secondary mb-1">@Model.Email</p>
+          <p class="small text-secondary opacity-50 mb-0">
+            Membro desde @Model.MemberSince.ToString("MMM yyyy", culture)
+          </p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="row g-4">
+
+    <div class="col-12 col-md-3">
+      <div class="nav flex-column profile-nav">
+        <a asp-action="Index"
+           class="nav-link @(Model.ActiveTab == "info" ? "active" : "")">
+          <i class="bi bi-person me-2"></i>Informações
+        </a>
+        <a asp-action="Index" asp-route-tab="security"
+           class="nav-link @(Model.ActiveTab == "security" ? "active" : "")">
+          <i class="bi bi-shield-lock me-2"></i>Segurança
+        </a>
+        <a asp-action="Index" asp-route-tab="appearance"
+           class="nav-link @(Model.ActiveTab == "appearance" ? "active" : "")">
+          <i class="bi bi-palette me-2"></i>Aparência
+        </a>
+        <a asp-action="Index" asp-route-tab="account"
+           class="nav-link @(Model.ActiveTab == "account" ? "active" : "")">
+          <i class="bi bi-gear me-2"></i>Conta
+        </a>
+      </div>
+    </div>
+
+    <div class="col-12 col-md-9">
+
+      @if (Model.ActiveTab == "info")
+      {
+        <div class="card">
+          <div class="card-body p-4">
+            <p class="card-section-title text-secondary small fw-semibold text-uppercase mb-3">Informações pessoais</p>
+            <form method="post" asp-action="EditName">
+              @Html.AntiForgeryToken()
+              <div class="mb-3">
+                <label class="form-label small">Nome</label>
+                <input type="text" name="Name" value="@Model.Name" class="form-control" maxlength="100" required>
+              </div>
+              <button type="submit" class="btn btn-sm btn-primary">Salvar</button>
+            </form>
+          </div>
+        </div>
+      }
+
+      @if (Model.ActiveTab == "security")
+      {
+        <div class="card mb-3">
+          <div class="card-body p-4">
+            <p class="card-section-title text-secondary small fw-semibold text-uppercase mb-3">E-mail</p>
+            <form method="post" asp-action="EditEmail">
+              @Html.AntiForgeryToken()
+              <div class="mb-3">
+                <label class="form-label small">Endereço de e-mail</label>
+                <input type="email" name="Email" value="@Model.Email" class="form-control" required>
+              </div>
+              @if (Model.HasPassword)
+              {
+                <div class="mb-3">
+                  <label class="form-label small">Confirmar senha</label>
+                  <div class="input-group">
+                    <input type="password" name="Password" id="emailPassword" class="form-control" required>
+                    <button type="button" class="btn btn-outline-secondary" data-toggle-pwd="emailPassword">
+                      <i class="bi bi-eye"></i>
+                    </button>
+                  </div>
+                </div>
+              }
+              <button type="submit" class="btn btn-sm btn-primary">Salvar</button>
+            </form>
+          </div>
+        </div>
+
+        @if (Model.HasPassword)
+        {
+          <div class="card">
+            <div class="card-body p-4">
+              <p class="card-section-title text-secondary small fw-semibold text-uppercase mb-3">Alterar senha</p>
+              <form method="post" asp-action="ChangePassword">
+                @Html.AntiForgeryToken()
+                <div class="mb-3">
+                  <label class="form-label small">Senha atual</label>
+                  <div class="input-group">
+                    <input type="password" name="CurrentPassword" id="currentPassword" class="form-control" required>
+                    <button type="button" class="btn btn-outline-secondary" data-toggle-pwd="currentPassword">
+                      <i class="bi bi-eye"></i>
+                    </button>
+                  </div>
+                </div>
+                <div class="mb-3">
+                  <label class="form-label small">Nova senha</label>
+                  <div class="input-group">
+                    <input type="password" name="NewPassword" id="newPassword" class="form-control" minlength="6" required>
+                    <button type="button" class="btn btn-outline-secondary" data-toggle-pwd="newPassword">
+                      <i class="bi bi-eye"></i>
+                    </button>
+                  </div>
+                </div>
+                <div class="mb-3">
+                  <label class="form-label small">Confirmar nova senha</label>
+                  <div class="input-group">
+                    <input type="password" name="ConfirmNewPassword" id="confirmNewPassword" class="form-control" required>
+                    <button type="button" class="btn btn-outline-secondary" data-toggle-pwd="confirmNewPassword">
+                      <i class="bi bi-eye"></i>
+                    </button>
+                  </div>
+                </div>
+                <button type="submit" class="btn btn-sm btn-primary">Alterar senha</button>
+              </form>
+            </div>
+          </div>
+        }
+      }
+
+      @if (Model.ActiveTab == "appearance")
+      {
+        <div class="card">
+          <div class="card-body p-4">
+            <p class="card-section-title text-secondary small fw-semibold text-uppercase mb-3">Tema</p>
+            <div class="row g-3" id="theme-options">
+              <div class="col-12 col-sm-4">
+                <button type="button" class="theme-card w-100 @(Model.Theme == "dark" ? "theme-card--active" : "")"
+                        data-theme-value="dark">
+                  <div class="theme-preview theme-preview--dark mb-2">
+                    <div class="theme-preview-bar"></div>
+                    <div class="theme-preview-content">
+                      <div class="theme-preview-line"></div>
+                      <div class="theme-preview-line theme-preview-line--short"></div>
+                    </div>
+                  </div>
+                  <span class="small fw-semibold">Escuro</span>
+                </button>
+              </div>
+              <div class="col-12 col-sm-4">
+                <button type="button" class="theme-card w-100 @(Model.Theme == "light" ? "theme-card--active" : "")"
+                        data-theme-value="light">
+                  <div class="theme-preview theme-preview--light mb-2">
+                    <div class="theme-preview-bar"></div>
+                    <div class="theme-preview-content">
+                      <div class="theme-preview-line"></div>
+                      <div class="theme-preview-line theme-preview-line--short"></div>
+                    </div>
+                  </div>
+                  <span class="small fw-semibold">Claro</span>
+                </button>
+              </div>
+              <div class="col-12 col-sm-4">
+                <button type="button" class="theme-card w-100 @(Model.Theme == "high-contrast" ? "theme-card--active" : "")"
+                        data-theme-value="high-contrast">
+                  <div class="theme-preview theme-preview--high-contrast mb-2">
+                    <div class="theme-preview-bar"></div>
+                    <div class="theme-preview-content">
+                      <div class="theme-preview-line"></div>
+                      <div class="theme-preview-line theme-preview-line--short"></div>
+                    </div>
+                  </div>
+                  <span class="small fw-semibold">Alto Contraste</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <form id="theme-form" method="post" asp-action="SaveTheme" class="d-none">
+          @Html.AntiForgeryToken()
+          <input type="hidden" name="Theme" id="theme-input" value="@Model.Theme">
+        </form>
+
+        <div class="card mt-3">
+          <div class="card-body p-4">
+            <p class="card-section-title text-secondary small fw-semibold text-uppercase mb-3">Tamanho da fonte</p>
+            <div class="d-flex gap-2 flex-wrap" id="font-size-options">
+              <button type="button" class="font-size-card @(Model.FontSize == "normal" ? "font-size-card--active" : "")" data-font-size-value="normal">Normal</button>
+              <button type="button" class="font-size-card @(Model.FontSize == "large" ? "font-size-card--active" : "")" data-font-size-value="large">Grande</button>
+              <button type="button" class="font-size-card @(Model.FontSize == "xlarge" ? "font-size-card--active" : "")" data-font-size-value="xlarge">Muito grande</button>
+            </div>
+          </div>
+        </div>
+
+        <form id="font-size-form" method="post" asp-action="SaveFontSize" class="d-none">
+          @Html.AntiForgeryToken()
+          <input type="hidden" name="FontSize" id="font-size-input" value="@Model.FontSize">
+        </form>
+      }
+
+      @if (Model.ActiveTab == "account")
+      {
+        <div class="card profile-danger-card">
+          <div class="card-body p-4">
+            <p class="card-section-title text-secondary small fw-semibold text-uppercase mb-3">Zona de perigo</p>
+            <p class="small text-secondary mb-3">
+              Esta ação é irreversível. Todas as suas transações, categorias e dados serão permanentemente excluídos.
+            </p>
+            <button type="button" class="btn btn-sm btn-outline-danger"
+                    data-bs-toggle="modal" data-bs-target="#deleteAccountModal">
+              Excluir conta
+            </button>
+          </div>
+        </div>
+      }
+
+    </div>
+  </div>
+
+</main>
+
+<div class="modal fade" id="deleteAccountModal" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <form method="post" asp-action="DeleteAccount">
+        @Html.AntiForgeryToken()
+        <div class="modal-header">
+          <h6 class="modal-title fw-semibold">Excluir conta</h6>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+          <p class="small text-secondary @(Model.HasPassword ? "mb-3" : "mb-0")">
+            Tem certeza? Todas as transações, categorias e dados da conta serão excluídos permanentemente e não poderão ser recuperados.
+          </p>
+          @if (Model.HasPassword)
+          {
+            <div>
+              <label class="form-label small">Confirmar senha</label>
+              <div class="input-group">
+                <input type="password" name="Password" id="deletePassword" class="form-control form-control-sm" required>
+                <button type="button" class="btn btn-outline-secondary btn-sm" data-toggle-pwd="deletePassword">
+                  <i class="bi bi-eye"></i>
+                </button>
+              </div>
+            </div>
+          }
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-sm btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
+          <button type="submit" class="btn btn-sm btn-danger">Excluir permanentemente</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+@if (Model.ActiveTab == "appearance")
+{
+  @section Scripts {
+    <script>
+      (function () {
+        var form = document.getElementById('theme-form');
+        var input = document.getElementById('theme-input');
+        var token = form.querySelector('[name="__RequestVerificationToken"]').value;
+
+        document.getElementById('theme-options').addEventListener('click', function (e) {
+          var card = e.target.closest('[data-theme-value]');
+          if (!card) return;
+
+          var theme = card.dataset.themeValue;
+
+          document.querySelectorAll('.theme-card').forEach(function (c) {
+            c.classList.remove('theme-card--active');
+          });
+          card.classList.add('theme-card--active');
+
+          document.documentElement.setAttribute('data-bs-theme', theme === 'high-contrast' ? 'dark' : theme);
+          document.documentElement.setAttribute('data-theme', theme);
+
+          fetch(form.action, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: '__RequestVerificationToken=' + encodeURIComponent(token) + '&Theme=' + encodeURIComponent(theme)
+          });
+        });
+
+        var fsForm  = document.getElementById('font-size-form');
+        var fsToken = fsForm.querySelector('[name="__RequestVerificationToken"]').value;
+
+        document.getElementById('font-size-options').addEventListener('click', function (e) {
+          var card = e.target.closest('[data-font-size-value]');
+          if (!card) return;
+
+          var size = card.dataset.fontSizeValue;
+
+          document.querySelectorAll('[data-font-size-value]').forEach(function (c) {
+            c.classList.remove('font-size-card--active');
+          });
+          card.classList.add('font-size-card--active');
+
+          if (size === 'normal') document.documentElement.removeAttribute('data-font-size');
+          else document.documentElement.setAttribute('data-font-size', size);
+
+          fetch(fsForm.action, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: '__RequestVerificationToken=' + encodeURIComponent(fsToken) + '&FontSize=' + encodeURIComponent(size)
+          });
+        });
+      })();
+    </script>
+  }
+}

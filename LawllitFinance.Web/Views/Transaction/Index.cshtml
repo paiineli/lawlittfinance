@@ -1,0 +1,342 @@
+@model TransactionListViewModel
+@{
+    var now = DateTime.Now;
+    var culture = new System.Globalization.CultureInfo("pt-BR");
+    var monthNames = new[] { "Janeiro","Fevereiro","Março","Abril","Maio","Junho",
+                                   "Julho","Agosto","Setembro","Outubro","Novembro","Dezembro" };
+    var hasActiveFilters = !string.IsNullOrEmpty(Model.FilterType) || !string.IsNullOrEmpty(Model.FilterSearch);
+}
+
+<main class="container-lg py-4">
+
+    <div class="d-flex align-items-center justify-content-between mb-3 flex-wrap gap-2">
+        <h5 class="fw-bold mb-0">Transações</h5>
+        @if (Model.Categories.Any())
+        {
+            <button class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#createModal">
+                <i class="bi bi-plus-lg"></i> Nova transação
+            </button>
+        }
+    </div>
+
+    <div class="d-flex flex-wrap align-items-center gap-2 mb-3">
+        <form method="get" asp-action="Index" class="d-flex gap-2 align-items-center">
+            @if (!string.IsNullOrEmpty(Model.FilterType))
+            {
+                <input type="hidden" name="type" value="@Model.FilterType">
+            }
+            @if (!string.IsNullOrEmpty(Model.FilterSearch))
+            {
+                <input type="hidden" name="search" value="@Model.FilterSearch">
+            }
+            <select name="month" class="form-select form-select-sm select-auto" data-auto-submit>
+                @for (int i = 1; i <= 12; i++)
+                {
+                    <option value="@i" selected="@(i == Model.FilterMonth ? "selected" : null)">@monthNames[i - 1]</option>
+                }
+            </select>
+            <select name="year" class="form-select form-select-sm select-auto" data-auto-submit>
+                @for (int y = now.Year; y >= now.Year - 4; y--)
+                {
+                    <option value="@y" selected="@(y == Model.FilterYear ? "selected" : null)">@y</option>
+                }
+            </select>
+        </form>
+
+        <div class="filter-group">
+            <a href="@Url.Action("Index", new { month = Model.FilterMonth, year = Model.FilterYear, search = Model.FilterSearch })"
+               class="filter-btn @(string.IsNullOrEmpty(Model.FilterType) ? "active" : "")">Todas</a>
+            <a href="@Url.Action("Index", new { type = "Income", month = Model.FilterMonth, year = Model.FilterYear, search = Model.FilterSearch })"
+               class="filter-btn @(Model.FilterType == "Income" ? "active" : "")">Receitas</a>
+            <a href="@Url.Action("Index", new { type = "Expense", month = Model.FilterMonth, year = Model.FilterYear, search = Model.FilterSearch })"
+               class="filter-btn @(Model.FilterType == "Expense" ? "active" : "")">Despesas</a>
+        </div>
+
+        <form method="get" asp-action="Index" class="d-flex gap-1 ms-auto">
+            <input type="hidden" name="month" value="@Model.FilterMonth">
+            <input type="hidden" name="year" value="@Model.FilterYear">
+            @if (!string.IsNullOrEmpty(Model.FilterType))
+            {
+                <input type="hidden" name="type" value="@Model.FilterType">
+            }
+            <input type="search" name="search" class="form-control form-control-sm search-input"
+                   placeholder="Buscar..." value="@Model.FilterSearch">
+            <button type="submit" class="btn btn-sm btn-outline-secondary">
+                <i class="bi bi-search"></i>
+            </button>
+        </form>
+
+        @if (hasActiveFilters)
+        {
+            <a href="@Url.Action("Index", new { month = Model.FilterMonth, year = Model.FilterYear })"
+               class="btn btn-sm btn-outline-secondary">
+                <i class="bi bi-x-lg"></i> Limpar
+            </a>
+        }
+    </div>
+
+    @if (Model.PendingRecurringCount > 0)
+    {
+        <div class="alert-recurring d-flex align-items-center justify-content-between py-2 px-3 mb-3 small rounded">
+            <span>
+                <i class="bi bi-arrow-repeat text-green me-1"></i>
+                <strong>@Model.PendingRecurringCount</strong>
+                transaç@(Model.PendingRecurringCount == 1 ? "ão recorrente" : "ões recorrentes") do mês anterior disponíve@(Model.PendingRecurringCount == 1 ? "l" : "is").
+            </span>
+            <form method="post" asp-action="ImportRecurring" class="mb-0">
+                @Html.AntiForgeryToken()
+                <input type="hidden" name="month" value="@now.Month">
+                <input type="hidden" name="year" value="@now.Year">
+                <button type="submit" class="btn btn-sm btn-primary ms-2">Importar</button>
+            </form>
+        </div>
+    }
+
+    @if (Model.Transactions.Any())
+    {
+        <div class="d-flex justify-content-end mb-2 small">
+            <span class="text-green me-3">+@Model.TotalIncome.ToString("C", culture)</span>
+            <span class="text-red">-@Model.TotalExpenses.ToString("C", culture)</span>
+        </div>
+    }
+
+    <div class="card">
+        <div class="table-responsive">
+            <table class="table table-hover mb-0">
+                <thead>
+                    <tr>
+                        <th>Data</th>
+                        <th>Descrição</th>
+                        <th>Categoria</th>
+                        <th>Tipo</th>
+                        <th class="text-end">Valor</th>
+                        <th class="col-actions"></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @if (!Model.Transactions.Any())
+                    {
+                        <tr>
+                            <td colspan="6" class="text-center py-5 text-secondary">
+                                @if (!Model.Categories.Any())
+                                {
+                                    <span>
+                                        Crie sua primeira <a asp-controller="Category" asp-action="Index" class="text-green">categoria</a> para adicionar transações.
+                                    </span>
+                                }
+                                else
+                                {
+                                    <span>Nenhuma transação encontrada.</span>
+                                }
+                            </td>
+                        </tr>
+                    }
+                    @foreach (var transaction in Model.Transactions)
+                    {
+                        <tr>
+                            <td class="text-secondary">@transaction.Date.ToString("dd/MM/yyyy")</td>
+                            <td class="fw-medium">
+                                @transaction.Description
+                                @if (transaction.IsRecurring)
+                                {
+                                    <i class="bi bi-arrow-repeat text-green ms-1 icon-sm" title="Recorrente"></i>
+                                }
+                            </td>
+                            <td><span class="badge bg-secondary bg-opacity-25 text-body">@transaction.Category?.Name</span></td>
+                            <td>
+                                <span class="@(transaction.Type == TransactionType.Income ? "badge-income" : "badge-expense")">
+                                    @(transaction.Type == TransactionType.Income ? "Receita" : "Despesa")
+                                </span>
+                            </td>
+                            <td class="text-end fw-semibold tabular-nums @(transaction.Type == TransactionType.Income ? "text-green" : "text-red")">
+                                @(transaction.Type == TransactionType.Income ? "+" : "-")@transaction.Amount.ToString("C", culture)
+                            </td>
+                            <td>
+                                <div class="d-flex gap-1 justify-content-end">
+                                    <button class="btn btn-sm btn-outline-secondary py-0 px-1"
+                                            data-bs-toggle="modal" data-bs-target="#editModal-@transaction.Id">
+                                        <i class="bi bi-pencil"></i>
+                                    </button>
+                                    <button class="btn btn-sm btn-outline-danger py-0 px-1"
+                                            data-bs-toggle="modal" data-bs-target="#deleteModal-@transaction.Id">
+                                        <i class="bi bi-trash"></i>
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+</main>
+
+<div class="modal fade" id="createModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Nova transação</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form method="post" asp-action="Create">
+                @Html.AntiForgeryToken()
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label small">Descrição <span class="text-secondary">(opcional)</span></label>
+                        <input type="text" class="form-control" name="Description" maxlength="200" placeholder="Ex: Almoço, Salário...">
+                    </div>
+                    <div class="row g-3 mb-3">
+                        <div class="col-6">
+                            <label class="form-label small">Valor (R$) <span class="text-danger">*</span></label>
+                            <input type="number" class="form-control" name="Amount" step="0.01" min="0.01" placeholder="0,00">
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label small">Tipo</label>
+                            <select class="form-select" name="Type" data-filter-type id="createType">
+                                <option value="Expense">Despesa</option>
+                                <option value="Income">Receita</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small">Data <span class="text-danger">*</span></label>
+                        <input type="date" class="form-control" name="Date" value="@DateTime.Today.ToString("yyyy-MM-dd")">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small">Categoria <span class="text-danger">*</span></label>
+                        <select class="form-select" name="CategoryId" data-filter-category id="createCategoryId">
+                            @if (Model.Categories.Any(c => c.Type == TransactionType.Expense))
+                            {
+                                <optgroup label="Despesas">
+                                    @foreach (var category in Model.Categories.Where(c => c.Type == TransactionType.Expense))
+                                    {
+                                        <option value="@category.Id">@category.Name</option>
+                                    }
+                                </optgroup>
+                            }
+                            @if (Model.Categories.Any(c => c.Type == TransactionType.Income))
+                            {
+                                <optgroup label="Receitas">
+                                    @foreach (var category in Model.Categories.Where(c => c.Type == TransactionType.Income))
+                                    {
+                                        <option value="@category.Id">@category.Name</option>
+                                    }
+                                </optgroup>
+                            }
+                        </select>
+                    </div>
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" name="IsRecurring" value="true" id="createIsRecurring">
+                        <label class="form-check-label small" for="createIsRecurring">Transação recorrente</label>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-primary">Criar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+@foreach (var transaction in Model.Transactions)
+{
+    <div class="modal fade" id="editModal-@transaction.Id" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Editar transação</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <form method="post" asp-action="Edit" asp-route-id="@transaction.Id">
+                    @Html.AntiForgeryToken()
+                    <div class="modal-body">
+                        <div class="mb-3">
+                            <label class="form-label small">Descrição <span class="text-secondary">(opcional)</span></label>
+                            <input type="text" class="form-control" name="Description" maxlength="200"
+                                   value="@transaction.Description" placeholder="Ex: Almoço, Salário...">
+                        </div>
+                        <div class="row g-3 mb-3">
+                            <div class="col-6">
+                                <label class="form-label small">Valor (R$) <span class="text-danger">*</span></label>
+                                <input type="number" class="form-control" name="Amount" step="0.01" min="0.01"
+                                       value="@transaction.Amount.ToString("F2", System.Globalization.CultureInfo.InvariantCulture)">
+                            </div>
+                            <div class="col-6">
+                                <label class="form-label small">Tipo</label>
+                                <select class="form-select" name="Type" data-filter-type>
+                                    <option value="Expense" selected="@(transaction.Type == TransactionType.Expense ? "selected" : null)">Despesa</option>
+                                    <option value="Income" selected="@(transaction.Type == TransactionType.Income ? "selected" : null)">Receita</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label small">Data <span class="text-danger">*</span></label>
+                            <input type="date" class="form-control" name="Date"
+                                   value="@transaction.Date.ToString("yyyy-MM-dd")">
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label small">Categoria <span class="text-danger">*</span></label>
+                            <select class="form-select" name="CategoryId" data-filter-category>
+                                @if (Model.Categories.Any(c => c.Type == TransactionType.Expense))
+                                {
+                                    <optgroup label="Despesas">
+                                        @foreach (var category in Model.Categories.Where(c => c.Type == TransactionType.Expense))
+                                        {
+                                            <option value="@category.Id" selected="@(category.Id == transaction.CategoryId ? "selected" : null)">@category.Name</option>
+                                        }
+                                    </optgroup>
+                                }
+                                @if (Model.Categories.Any(c => c.Type == TransactionType.Income))
+                                {
+                                    <optgroup label="Receitas">
+                                        @foreach (var category in Model.Categories.Where(c => c.Type == TransactionType.Income))
+                                        {
+                                            <option value="@category.Id" selected="@(category.Id == transaction.CategoryId ? "selected" : null)">@category.Name</option>
+                                        }
+                                    </optgroup>
+                                }
+                            </select>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" name="IsRecurring" value="true"
+                                   id="editIsRecurring-@transaction.Id" @(transaction.IsRecurring ? "checked" : "")>
+                            <label class="form-check-label small" for="editIsRecurring-@transaction.Id">Transação recorrente</label>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
+                        <button type="submit" class="btn btn-primary">Salvar</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal fade" id="deleteModal-@transaction.Id" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered modal-sm">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h6 class="modal-title">Confirmar exclusão</h6>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body text-secondary small">
+                    <p class="mb-1">Tem certeza que deseja excluir esta transação?</p>
+                    <div class="mt-2 p-2 rounded bg-body-tertiary">
+                        <p class="mb-0 fw-medium text-body">@(transaction.Description ?? "Sem descrição")</p>
+                        <p class="mb-0 @(transaction.Type == TransactionType.Income ? "text-green" : "text-red")">@(transaction.Type == TransactionType.Income ? "+" : "-")@transaction.Amount.ToString("C", culture)</p>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-sm btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <form method="post" asp-action="Delete" asp-route-id="@transaction.Id">
+                        @Html.AntiForgeryToken()
+                        <button type="submit" class="btn btn-sm btn-danger">Excluir</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
