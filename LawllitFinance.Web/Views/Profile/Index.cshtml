@@ -1,6 +1,8 @@
 @model ProfileViewModel
 @{
     var culture = System.Globalization.CultureInfo.CurrentUICulture;
+    var monthRaw = Model.MemberSince.ToString("MMM", culture);
+    var memberSinceMonth = char.ToUpper(monthRaw[0]) + monthRaw[1..].TrimEnd('.') + ".";
 }
 
 <main class="container-lg py-4">
@@ -16,8 +18,8 @@
                 <div>
                     <p class="fw-semibold mb-0">@Model.Name</p>
                     <p class="small text-secondary mb-1">@Model.Email</p>
-                    <p class="small text-secondary opacity-50 mb-0">
-                        @Localizer["Prof_MemberSince"] @Model.MemberSince.ToString("MMM yyyy", culture)
+                    <p class="small text-secondary opacity-75 mb-0">
+                        @Localizer["Prof_MemberSince"] @memberSinceMonth @Model.MemberSince.Year
                     </p>
                 </div>
             </div>
@@ -38,7 +40,7 @@
                 </a>
                 <a asp-action="Index" asp-route-tab="appearance"
                    class="nav-link @(Model.ActiveTab == "appearance" ? "active" : "")">
-                    <i class="bi bi-palette me-2"></i>@Localizer["Prof_Nav_Appearance"]
+                    <i class="bi bi-sliders me-2"></i>@Localizer["Prof_Nav_Appearance"]
                 </a>
                 <a asp-action="Index" asp-route-tab="account"
                    class="nav-link @(Model.ActiveTab == "account" ? "active" : "")">
@@ -82,7 +84,7 @@
                                 <div class="mb-3">
                                     <label class="form-label small">@Localizer["Prof_Security_ConfirmPwd"]</label>
                                     <div class="input-group">
-                                        <input type="password" name="Password" id="emailPassword" class="form-control" required>
+                                        <input type="password" name="Password" id="emailPassword" class="form-control" placeholder="@Localizer["Prof_Security_ConfirmPwd"]" required>
                                         <button type="button" class="btn btn-outline-secondary" aria-label="@Localizer["Aria_ShowPassword"]" data-toggle-pwd="emailPassword">
                                             <i class="bi bi-eye"></i>
                                         </button>
@@ -104,7 +106,7 @@
                                 <div class="mb-3">
                                     <label class="form-label small">@Localizer["Prof_Security_CurrentPwd"]</label>
                                     <div class="input-group">
-                                        <input type="password" name="CurrentPassword" id="currentPassword" class="form-control" required>
+                                        <input type="password" name="CurrentPassword" id="currentPassword" class="form-control" placeholder="@Localizer["Prof_Security_CurrentPwd"]" required>
                                         <button type="button" class="btn btn-outline-secondary" aria-label="@Localizer["Aria_ShowPassword"]" data-toggle-pwd="currentPassword">
                                             <i class="bi bi-eye"></i>
                                         </button>
@@ -113,7 +115,7 @@
                                 <div class="mb-3">
                                     <label class="form-label small">@Localizer["Prof_Security_NewPwd"]</label>
                                     <div class="input-group">
-                                        <input type="password" name="NewPassword" id="newPassword" class="form-control" minlength="6" required>
+                                        <input type="password" name="NewPassword" id="newPassword" class="form-control" placeholder="@Localizer["Register_PasswordPlaceholder"]" minlength="6" required>
                                         <button type="button" class="btn btn-outline-secondary" aria-label="@Localizer["Aria_ShowPassword"]" data-toggle-pwd="newPassword">
                                             <i class="bi bi-eye"></i>
                                         </button>
@@ -122,7 +124,7 @@
                                 <div class="mb-3">
                                     <label class="form-label small">@Localizer["Prof_Security_ConfirmNewPwd"]</label>
                                     <div class="input-group">
-                                        <input type="password" name="ConfirmNewPassword" id="confirmNewPassword" class="form-control" required>
+                                        <input type="password" name="ConfirmNewPassword" id="confirmNewPassword" class="form-control" placeholder="@Localizer["Prof_Security_ConfirmNewPwd"]" required>
                                         <button type="button" class="btn btn-outline-secondary" aria-label="@Localizer["Aria_ShowPassword"]" data-toggle-pwd="confirmNewPassword">
                                             <i class="bi bi-eye"></i>
                                         </button>
@@ -260,7 +262,7 @@
                         <div>
                             <label class="form-label small">@Localizer["Prof_Delete_Password"]</label>
                             <div class="input-group">
-                                <input type="password" name="Password" id="deletePassword" class="form-control form-control-sm" required>
+                                <input type="password" name="Password" id="deletePassword" class="form-control form-control-sm" placeholder="@Localizer["Prof_Delete_Password"]" required>
                                 <button type="button" class="btn btn-outline-secondary btn-sm" aria-label="@Localizer["Aria_ShowPassword"]" data-toggle-pwd="deletePassword">
                                     <i class="bi bi-eye"></i>
                                 </button>

@@ -44,6 +44,16 @@ document.addEventListener('show.bs.modal', function (event) {
     if (typeSelect) filterCategoriesByType(typeSelect);
 });
 
+document.addEventListener('submit', function (event) {
+    event.target.querySelectorAll('[data-decimal-input]').forEach(function (input) {
+        if (input.value.includes(',')) {
+            input.value = input.value.replace(/\./g, '');
+        } else {
+            input.value = input.value.replace('.', ',');
+        }
+    });
+});
+
 setTimeout(function () {
     document.querySelectorAll('.alert-dismissible').forEach(function (alertElement) {
         alertElement.addEventListener('transitionend', function () { alertElement.remove(); }, { once: true });

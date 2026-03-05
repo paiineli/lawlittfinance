@@ -185,7 +185,7 @@
                     <div class="row g-3 mb-3">
                         <div class="col-6">
                             <label class="form-label small">@Localizer["Trans_AmountLabel"] <span class="text-danger">*</span></label>
-                            <input type="number" class="form-control" name="Amount" step="0.01" min="0.01" placeholder="@Localizer["Placeholder_Amount"]">
+                            <input type="text" inputmode="decimal" class="form-control" name="Amount" placeholder="@Localizer["Placeholder_Amount"]" data-decimal-input>
                         </div>
                         <div class="col-6">
                             <label class="form-label small">@Localizer["Lbl_Type"]</label>
@@ -256,8 +256,8 @@
                         <div class="row g-3 mb-3">
                             <div class="col-6">
                                 <label class="form-label small">@Localizer["Trans_AmountLabel"] <span class="text-danger">*</span></label>
-                                <input type="number" class="form-control" name="Amount" step="0.01" min="0.01"
-                                       value="@transaction.Amount.ToString("F2", System.Globalization.CultureInfo.InvariantCulture)">
+                                <input type="text" inputmode="decimal" class="form-control" name="Amount"
+                                       value="@transaction.Amount.ToString("F2", System.Globalization.CultureInfo.CurrentCulture)" data-decimal-input>
                             </div>
                             <div class="col-6">
                                 <label class="form-label small">@Localizer["Lbl_Type"]</label>

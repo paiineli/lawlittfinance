@@ -1,5 +1,7 @@
 const chartColors = ['#4ade80', '#60a5fa', '#f97316', '#f472b6', '#a78bfa', '#34d399'];
-const legendColor = '#e5e7eb';
+const isLightTheme = document.documentElement.getAttribute('data-theme') === 'light';
+const legendColor = isLightTheme ? '#374151' : '#e5e7eb';
+const gridColor = isLightTheme ? 'rgba(0,0,0,0.08)' : 'rgba(255,255,255,0.06)';
 const fontFamily = { family: 'JetBrains Mono', size: 11 };
 
 function initDashboard(data) {
@@ -67,14 +69,14 @@ function buildBarChart(trendData, months, incomeLabel, expensesLabel) {
                 },
             },
             scales: {
-                x: { ticks: { color: legendColor, font: fontFamily }, grid: { color: 'rgba(255,255,255,0.06)' } },
+                x: { ticks: { color: legendColor, font: fontFamily }, grid: { color: gridColor } },
                 y: {
                     ticks: {
                         color: legendColor,
                         font: fontFamily,
                         callback: value => 'R$ ' + value.toLocaleString('pt-BR', { minimumFractionDigits: 0 }),
                     },
-                    grid: { color: 'rgba(255,255,255,0.06)' },
+                    grid: { color: gridColor },
                 },
             },
         },
