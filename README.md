@@ -1,4 +1,6 @@
-# lawllitfinance
+<p align="center">
+  <img src=".github/banner.svg" alt="lawllitfinance" width="800" />
+</p>
 
 ---
 
