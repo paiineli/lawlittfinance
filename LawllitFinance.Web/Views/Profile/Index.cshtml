@@ -1,6 +1,6 @@
 @model ProfileViewModel
 @{
-    var culture = System.Globalization.CultureInfo.CurrentCulture;
+    var culture = System.Globalization.CultureInfo.CurrentUICulture;
 }
 
 <main class="container-lg py-4">
@@ -278,5 +278,5 @@
 </div>
 
 @section Scripts {
-    <script src="~/js/profile.js"></script>
+    <script src="~/js/profile.js" asp-append-version="true"></script>
 }

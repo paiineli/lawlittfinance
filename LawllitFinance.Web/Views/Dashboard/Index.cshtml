@@ -240,13 +240,13 @@
     <script type="application/json" id="dashboardData">
         @Html.Raw(System.Text.Json.JsonSerializer.Serialize(new {
             categories = Model.ExpensesByCategory.Select(c => new { label = c.CategoryName, value = (double)c.Total }),
-                trend = Model.MonthlyTrend.Select(t => new { month = t.Month, year = t.Year, income = (double)t.Income, expenses = (double)t.Expenses }),
-                incomeLabel = Localizer["Lbl_Income"].Value,
-                expensesLabel = Localizer["Lbl_Expense"].Value,
-                othersLabel = Localizer["Dash_Others"].Value,
-                months = monthNames
+                        trend = Model.MonthlyTrend.Select(t => new { month = t.Month, year = t.Year, income = (double)t.Income, expenses = (double)t.Expenses }),
+                        incomeLabel = Localizer["Lbl_Income"].Value,
+                        expensesLabel = Localizer["Lbl_Expense"].Value,
+                        othersLabel = Localizer["Dash_Others"].Value,
+                        months = monthNames
         }))
 </script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
-<script src="~/js/dashboard.js"></script>
+<script src="~/js/dashboard.js" asp-append-version="true"></script>
 }
