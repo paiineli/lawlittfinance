@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="800" height="120" viewBox="0 0 800 120">
+	<rect width="800" height="120" rx="8" fill="#0a0a0a"/>
+	<rect width="800" height="120" rx="8" fill="none" stroke="rgba(255,255,255,0.08)" stroke-width="1"/>
+	<text x="400" y="58" text-anchor="middle" font-family="JetBrains Mono, monospace" font-weight="700" font-size="34" fill="#e5e7eb">
+		lawllit<tspan fill="#4ade80">finance</tspan>
+	</text>
+	<text x="400" y="86" text-anchor="middle" font-family="JetBrains Mono, monospace" font-weight="400" font-size="13" fill="#6b7280">Personal finance web app.</text>
+</svg>
