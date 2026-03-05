@@ -4,15 +4,15 @@ namespace LawllitFinance.Web.Models;
 
 public class RegisterViewModel
 {
-    [Required(ErrorMessage = "Nome é obrigatório")]
-    [StringLength(100, ErrorMessage = "Nome não pode exceder 100 caracteres")]
+    [Required(ErrorMessage = "Val_NameRequired")]
+    [StringLength(100, ErrorMessage = "Val_NameMaxLength")]
     public string Name { get; set; } = string.Empty;
 
-    [Required(ErrorMessage = "E-mail é obrigatório")]
-    [EmailAddress(ErrorMessage = "E-mail inválido")]
+    [Required(ErrorMessage = "Val_EmailRequired")]
+    [EmailAddress(ErrorMessage = "Val_EmailInvalid")]
     public string Email { get; set; } = string.Empty;
 
-    [Required(ErrorMessage = "Senha é obrigatória")]
-    [MinLength(6, ErrorMessage = "Senha deve ter pelo menos 6 caracteres")]
+    [Required(ErrorMessage = "Val_PasswordRequired")]
+    [MinLength(6, ErrorMessage = "Val_PasswordMin6")]
     public string Password { get; set; } = string.Empty;
 }

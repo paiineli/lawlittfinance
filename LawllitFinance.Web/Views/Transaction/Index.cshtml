@@ -1,20 +1,25 @@
 @model TransactionListViewModel
 @{
     var now = DateTime.Now;
-    var culture = new System.Globalization.CultureInfo("pt-BR");
-    var monthNames = new[] { "Janeiro","Fevereiro","Março","Abril","Maio","Junho",
-                                   "Julho","Agosto","Setembro","Outubro","Novembro","Dezembro" };
+    var culture = System.Globalization.CultureInfo.CurrentCulture;
+    var monthNames = new[]
+    {
+        Localizer["Month_1"].Value,  Localizer["Month_2"].Value,  Localizer["Month_3"].Value,
+        Localizer["Month_4"].Value,  Localizer["Month_5"].Value,  Localizer["Month_6"].Value,
+        Localizer["Month_7"].Value,  Localizer["Month_8"].Value,  Localizer["Month_9"].Value,
+        Localizer["Month_10"].Value, Localizer["Month_11"].Value, Localizer["Month_12"].Value,
+    };
     var hasActiveFilters = !string.IsNullOrEmpty(Model.FilterType) || !string.IsNullOrEmpty(Model.FilterSearch);
 }
 
 <main class="container-lg py-4">
 
     <div class="d-flex align-items-center justify-content-between mb-3 flex-wrap gap-2">
-        <h5 class="fw-bold mb-0">Transações</h5>
+        <h5 class="fw-bold mb-0">@Localizer["Trans_Title"]</h5>
         @if (Model.Categories.Any())
         {
             <button class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#createModal">
-                <i class="bi bi-plus-lg"></i> Nova transação
+                <i class="bi bi-plus-lg"></i> @Localizer["Trans_New"]
             </button>
         }
     </div>
@@ -45,32 +50,21 @@
 
         <div class="filter-group">
             <a href="@Url.Action("Index", new { month = Model.FilterMonth, year = Model.FilterYear, search = Model.FilterSearch })"
-               class="filter-btn @(string.IsNullOrEmpty(Model.FilterType) ? "active" : "")">Todas</a>
+               class="filter-btn @(string.IsNullOrEmpty(Model.FilterType) ? "active" : "")">@Localizer["Filter_All"]</a>
             <a href="@Url.Action("Index", new { type = "Income", month = Model.FilterMonth, year = Model.FilterYear, search = Model.FilterSearch })"
-               class="filter-btn @(Model.FilterType == "Income" ? "active" : "")">Receitas</a>
+               class="filter-btn @(Model.FilterType == "Income" ? "active" : "")">@Localizer["Dash_Income"]</a>
             <a href="@Url.Action("Index", new { type = "Expense", month = Model.FilterMonth, year = Model.FilterYear, search = Model.FilterSearch })"
-               class="filter-btn @(Model.FilterType == "Expense" ? "active" : "")">Despesas</a>
+               class="filter-btn @(Model.FilterType == "Expense" ? "active" : "")">@Localizer["Dash_Expenses"]</a>
         </div>
 
-        <form method="get" asp-action="Index" class="d-flex gap-1 ms-auto">
-            <input type="hidden" name="month" value="@Model.FilterMonth">
-            <input type="hidden" name="year" value="@Model.FilterYear">
-            @if (!string.IsNullOrEmpty(Model.FilterType))
-            {
-                <input type="hidden" name="type" value="@Model.FilterType">
-            }
-            <input type="search" name="search" class="form-control form-control-sm search-input"
-                   placeholder="Buscar..." value="@Model.FilterSearch">
-            <button type="submit" class="btn btn-sm btn-outline-secondary">
-                <i class="bi bi-search"></i>
-            </button>
-        </form>
+        <input type="search" class="form-control form-control-sm search-input ms-auto"
+               placeholder="@Localizer["Search_Placeholder"]" value="@Model.FilterSearch" data-live-search>
 
         @if (hasActiveFilters)
         {
             <a href="@Url.Action("Index", new { month = Model.FilterMonth, year = Model.FilterYear })"
                class="btn btn-sm btn-outline-secondary">
-                <i class="bi bi-x-lg"></i> Limpar
+                <i class="bi bi-x-lg"></i> @Localizer["Btn_Clear"]
             </a>
         }
     </div>
@@ -80,14 +74,13 @@
         <div class="alert-recurring d-flex align-items-center justify-content-between py-2 px-3 mb-3 small rounded">
             <span>
                 <i class="bi bi-arrow-repeat text-green me-1"></i>
-                <strong>@Model.PendingRecurringCount</strong>
-                transaç@(Model.PendingRecurringCount == 1 ? "ão recorrente" : "ões recorrentes") do mês anterior disponíve@(Model.PendingRecurringCount == 1 ? "l" : "is").
+                @Html.Raw(string.Format(Localizer["Trans_RecurringHint"].Value, $"<strong>{Model.PendingRecurringCount}</strong>"))
             </span>
             <form method="post" asp-action="ImportRecurring" class="mb-0">
                 @Html.AntiForgeryToken()
                 <input type="hidden" name="month" value="@now.Month">
                 <input type="hidden" name="year" value="@now.Year">
-                <button type="submit" class="btn btn-sm btn-primary ms-2">Importar</button>
+                <button type="submit" class="btn btn-sm btn-primary ms-2">@Localizer["Btn_Import"]</button>
             </form>
         </div>
     }
@@ -105,15 +98,15 @@
             <table class="table table-hover mb-0">
                 <thead>
                     <tr>
-                        <th>Data</th>
-                        <th>Descrição</th>
-                        <th>Categoria</th>
-                        <th>Tipo</th>
-                        <th class="text-end">Valor</th>
+                        <th>@Localizer["Lbl_Date"]</th>
+                        <th>@Localizer["Lbl_Description"]</th>
+                        <th>@Localizer["Lbl_Category"]</th>
+                        <th>@Localizer["Lbl_Type"]</th>
+                        <th class="text-end">@Localizer["Lbl_Amount"]</th>
                         <th class="col-actions"></th>
                     </tr>
                 </thead>
-                <tbody>
+                <tbody data-search-table>
                     @if (!Model.Transactions.Any())
                     {
                         <tr>
@@ -121,31 +114,31 @@
                                 @if (!Model.Categories.Any())
                                 {
                                     <span>
-                                        Crie sua primeira <a asp-controller="Category" asp-action="Index" class="text-green">categoria</a> para adicionar transações.
+                                        @Localizer["Trans_NoCategoryCreate"] <a asp-controller="Category" asp-action="Index" class="text-green">@Localizer["Trans_NoCategoryLink"]</a> @Localizer["Trans_NoCategoryEnd"]
                                     </span>
                                 }
                                 else
                                 {
-                                    <span>Nenhuma transação encontrada.</span>
+                                    <span>@Localizer["Trans_NoTransactions"]</span>
                                 }
                             </td>
                         </tr>
                     }
                     @foreach (var transaction in Model.Transactions)
                     {
-                        <tr>
+                        <tr data-search-row>
                             <td class="text-secondary">@transaction.Date.ToString("dd/MM/yyyy")</td>
                             <td class="fw-medium">
                                 @transaction.Description
                                 @if (transaction.IsRecurring)
                                 {
-                                    <i class="bi bi-arrow-repeat text-green ms-1 icon-sm" title="Recorrente"></i>
+                                    <i class="bi bi-arrow-repeat text-green ms-1 icon-sm" title="@Localizer["Trans_Recurring"]"></i>
                                 }
                             </td>
                             <td><span class="badge bg-secondary bg-opacity-25 text-body">@transaction.Category?.Name</span></td>
                             <td>
                                 <span class="@(transaction.Type == TransactionType.Income ? "badge-income" : "badge-expense")">
-                                    @(transaction.Type == TransactionType.Income ? "Receita" : "Despesa")
+                                    @(transaction.Type == TransactionType.Income ? Localizer["Lbl_Income"].Value : Localizer["Lbl_Expense"].Value)
                                 </span>
                             </td>
                             <td class="text-end fw-semibold tabular-nums @(transaction.Type == TransactionType.Income ? "text-green" : "text-red")">
@@ -165,6 +158,9 @@
                             </td>
                         </tr>
                     }
+                    <tr data-search-empty hidden>
+                        <td colspan="6" class="text-center py-5 text-secondary">@Localizer["Trans_NoTransactions"]</td>
+                    </tr>
                 </tbody>
             </table>
         </div>
@@ -176,39 +172,39 @@
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title">Nova transação</h5>
+                <h5 class="modal-title">@Localizer["Trans_New"]</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
             <form method="post" asp-action="Create">
                 @Html.AntiForgeryToken()
                 <div class="modal-body">
                     <div class="mb-3">
-                        <label class="form-label small">Descrição <span class="text-secondary">(opcional)</span></label>
-                        <input type="text" class="form-control" name="Description" maxlength="200" placeholder="Ex: Almoço, Salário...">
+                        <label class="form-label small">@Localizer["Trans_DescriptionOptional"]</label>
+                        <input type="text" class="form-control" name="Description" maxlength="200" placeholder="@Localizer["Trans_DescriptionPlaceholder"]">
                     </div>
                     <div class="row g-3 mb-3">
                         <div class="col-6">
-                            <label class="form-label small">Valor (R$) <span class="text-danger">*</span></label>
-                            <input type="number" class="form-control" name="Amount" step="0.01" min="0.01" placeholder="0,00">
+                            <label class="form-label small">@Localizer["Trans_AmountLabel"] <span class="text-danger">*</span></label>
+                            <input type="number" class="form-control" name="Amount" step="0.01" min="0.01" placeholder="@Localizer["Placeholder_Amount"]">
                         </div>
                         <div class="col-6">
-                            <label class="form-label small">Tipo</label>
+                            <label class="form-label small">@Localizer["Lbl_Type"]</label>
                             <select class="form-select" name="Type" data-filter-type id="createType">
-                                <option value="Expense">Despesa</option>
-                                <option value="Income">Receita</option>
+                                <option value="Expense">@Localizer["Lbl_Expense"]</option>
+                                <option value="Income">@Localizer["Lbl_Income"]</option>
                             </select>
                         </div>
                     </div>
                     <div class="mb-3">
-                        <label class="form-label small">Data <span class="text-danger">*</span></label>
+                        <label class="form-label small">@Localizer["Lbl_Date"] <span class="text-danger">*</span></label>
                         <input type="date" class="form-control" name="Date" value="@DateTime.Today.ToString("yyyy-MM-dd")">
                     </div>
                     <div class="mb-3">
-                        <label class="form-label small">Categoria <span class="text-danger">*</span></label>
+                        <label class="form-label small">@Localizer["Lbl_Category"] <span class="text-danger">*</span></label>
                         <select class="form-select" name="CategoryId" data-filter-category id="createCategoryId">
                             @if (Model.Categories.Any(c => c.Type == TransactionType.Expense))
                             {
-                                <optgroup label="Despesas">
+                                <optgroup label="@Localizer["Dash_Expenses"]" data-group-type="Expense">
                                     @foreach (var category in Model.Categories.Where(c => c.Type == TransactionType.Expense))
                                     {
                                         <option value="@category.Id">@category.Name</option>
@@ -217,7 +213,7 @@
                             }
                             @if (Model.Categories.Any(c => c.Type == TransactionType.Income))
                             {
-                                <optgroup label="Receitas">
+                                <optgroup label="@Localizer["Dash_Income"]" data-group-type="Income">
                                     @foreach (var category in Model.Categories.Where(c => c.Type == TransactionType.Income))
                                     {
                                         <option value="@category.Id">@category.Name</option>
@@ -228,12 +224,12 @@
                     </div>
                     <div class="form-check">
                         <input class="form-check-input" type="checkbox" name="IsRecurring" value="true" id="createIsRecurring">
-                        <label class="form-check-label small" for="createIsRecurring">Transação recorrente</label>
+                        <label class="form-check-label small" for="createIsRecurring">@Localizer["Trans_IsRecurring"]</label>
                     </div>
                 </div>
                 <div class="modal-footer">
-                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
-                    <button type="submit" class="btn btn-primary">Criar</button>
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">@Localizer["Btn_Cancel"]</button>
+                    <button type="submit" class="btn btn-primary">@Localizer["Btn_Create"]</button>
                 </div>
             </form>
         </div>
@@ -246,42 +242,42 @@
         <div class="modal-dialog modal-dialog-centered">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h5 class="modal-title">Editar transação</h5>
+                    <h5 class="modal-title">@Localizer["Trans_EditTitle"]</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                 </div>
                 <form method="post" asp-action="Edit" asp-route-id="@transaction.Id">
                     @Html.AntiForgeryToken()
                     <div class="modal-body">
                         <div class="mb-3">
-                            <label class="form-label small">Descrição <span class="text-secondary">(opcional)</span></label>
+                            <label class="form-label small">@Localizer["Trans_DescriptionOptional"]</label>
                             <input type="text" class="form-control" name="Description" maxlength="200"
-                                   value="@transaction.Description" placeholder="Ex: Almoço, Salário...">
+                                   value="@transaction.Description" placeholder="@Localizer["Trans_DescriptionPlaceholder"]">
                         </div>
                         <div class="row g-3 mb-3">
                             <div class="col-6">
-                                <label class="form-label small">Valor (R$) <span class="text-danger">*</span></label>
+                                <label class="form-label small">@Localizer["Trans_AmountLabel"] <span class="text-danger">*</span></label>
                                 <input type="number" class="form-control" name="Amount" step="0.01" min="0.01"
                                        value="@transaction.Amount.ToString("F2", System.Globalization.CultureInfo.InvariantCulture)">
                             </div>
                             <div class="col-6">
-                                <label class="form-label small">Tipo</label>
+                                <label class="form-label small">@Localizer["Lbl_Type"]</label>
                                 <select class="form-select" name="Type" data-filter-type>
-                                    <option value="Expense" selected="@(transaction.Type == TransactionType.Expense ? "selected" : null)">Despesa</option>
-                                    <option value="Income" selected="@(transaction.Type == TransactionType.Income ? "selected" : null)">Receita</option>
+                                    <option value="Expense" selected="@(transaction.Type == TransactionType.Expense ? "selected" : null)">@Localizer["Lbl_Expense"]</option>
+                                    <option value="Income" selected="@(transaction.Type == TransactionType.Income ? "selected" : null)">@Localizer["Lbl_Income"]</option>
                                 </select>
                             </div>
                         </div>
                         <div class="mb-3">
-                            <label class="form-label small">Data <span class="text-danger">*</span></label>
+                            <label class="form-label small">@Localizer["Lbl_Date"] <span class="text-danger">*</span></label>
                             <input type="date" class="form-control" name="Date"
                                    value="@transaction.Date.ToString("yyyy-MM-dd")">
                         </div>
                         <div class="mb-3">
-                            <label class="form-label small">Categoria <span class="text-danger">*</span></label>
+                            <label class="form-label small">@Localizer["Lbl_Category"] <span class="text-danger">*</span></label>
                             <select class="form-select" name="CategoryId" data-filter-category>
                                 @if (Model.Categories.Any(c => c.Type == TransactionType.Expense))
                                 {
-                                    <optgroup label="Despesas">
+                                    <optgroup label="@Localizer["Dash_Expenses"]" data-group-type="Expense">
                                         @foreach (var category in Model.Categories.Where(c => c.Type == TransactionType.Expense))
                                         {
                                             <option value="@category.Id" selected="@(category.Id == transaction.CategoryId ? "selected" : null)">@category.Name</option>
@@ -290,7 +286,7 @@
                                 }
                                 @if (Model.Categories.Any(c => c.Type == TransactionType.Income))
                                 {
-                                    <optgroup label="Receitas">
+                                    <optgroup label="@Localizer["Dash_Income"]" data-group-type="Income">
                                         @foreach (var category in Model.Categories.Where(c => c.Type == TransactionType.Income))
                                         {
                                             <option value="@category.Id" selected="@(category.Id == transaction.CategoryId ? "selected" : null)">@category.Name</option>
@@ -302,12 +298,12 @@
                         <div class="form-check">
                             <input class="form-check-input" type="checkbox" name="IsRecurring" value="true"
                                    id="editIsRecurring-@transaction.Id" @(transaction.IsRecurring ? "checked" : "")>
-                            <label class="form-check-label small" for="editIsRecurring-@transaction.Id">Transação recorrente</label>
+                            <label class="form-check-label small" for="editIsRecurring-@transaction.Id">@Localizer["Trans_IsRecurring"]</label>
                         </div>
                     </div>
                     <div class="modal-footer">
-                        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
-                        <button type="submit" class="btn btn-primary">Salvar</button>
+                        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">@Localizer["Btn_Cancel"]</button>
+                        <button type="submit" class="btn btn-primary">@Localizer["Btn_Save"]</button>
                     </div>
                 </form>
             </div>
@@ -318,25 +314,24 @@
         <div class="modal-dialog modal-dialog-centered modal-sm">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h6 class="modal-title">Confirmar exclusão</h6>
+                    <h6 class="modal-title">@Localizer["Trans_DeleteTitle"]</h6>
                     <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                 </div>
                 <div class="modal-body text-secondary small">
-                    <p class="mb-1">Tem certeza que deseja excluir esta transação?</p>
+                    <p class="mb-1">@Localizer["Trans_DeleteConfirm"]</p>
                     <div class="mt-2 p-2 rounded bg-body-tertiary">
-                        <p class="mb-0 fw-medium text-body">@(transaction.Description ?? "Sem descrição")</p>
+                        <p class="mb-0 fw-medium text-body">@(transaction.Description ?? Localizer["Trans_NoDescription"].Value)</p>
                         <p class="mb-0 @(transaction.Type == TransactionType.Income ? "text-green" : "text-red")">@(transaction.Type == TransactionType.Income ? "+" : "-")@transaction.Amount.ToString("C", culture)</p>
                     </div>
                 </div>
                 <div class="modal-footer">
-                    <button type="button" class="btn btn-sm btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="button" class="btn btn-sm btn-outline-secondary" data-bs-dismiss="modal">@Localizer["Btn_Cancel"]</button>
                     <form method="post" asp-action="Delete" asp-route-id="@transaction.Id">
                         @Html.AntiForgeryToken()
-                        <button type="submit" class="btn btn-sm btn-danger">Excluir</button>
+                        <button type="submit" class="btn btn-sm btn-danger">@Localizer["Btn_Delete"]</button>
                     </form>
                 </div>
             </div>
         </div>
     </div>
 }
-

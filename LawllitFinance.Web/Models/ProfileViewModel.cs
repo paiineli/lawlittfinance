@@ -11,6 +11,7 @@ public class ProfileViewModel
     public string ActiveTab { get; set; } = "info";
     public string Theme { get; set; } = "dark";
     public string FontSize { get; set; } = "normal";
+    public string Language { get; set; } = "pt-BR";
 }
 
 public class SaveThemeViewModel
@@ -25,17 +26,23 @@ public class SaveFontSizeViewModel
     public string FontSize { get; set; } = string.Empty;
 }
 
+public class SaveLanguageViewModel
+{
+    [Required]
+    public string Language { get; set; } = string.Empty;
+}
+
 public class EditNameViewModel
 {
-    [Required(ErrorMessage = "O nome é obrigatório.")]
-    [MaxLength(100)]
+    [Required(ErrorMessage = "Val_NameRequired")]
+    [MaxLength(100, ErrorMessage = "Val_NameMaxLength")]
     public string Name { get; set; } = string.Empty;
 }
 
 public class EditEmailViewModel
 {
-    [Required(ErrorMessage = "O e-mail é obrigatório.")]
-    [EmailAddress(ErrorMessage = "E-mail inválido.")]
+    [Required(ErrorMessage = "Val_EmailRequired")]
+    [EmailAddress(ErrorMessage = "Val_EmailInvalid")]
     public string Email { get; set; } = string.Empty;
 
     public string? Password { get; set; }
@@ -43,14 +50,14 @@ public class EditEmailViewModel
 
 public class ChangePasswordViewModel
 {
-    [Required(ErrorMessage = "A senha atual é obrigatória.")]
+    [Required(ErrorMessage = "Val_PasswordRequired")]
     public string CurrentPassword { get; set; } = string.Empty;
 
-    [Required(ErrorMessage = "A nova senha é obrigatória.")]
-    [MinLength(6, ErrorMessage = "Mínimo de 6 caracteres.")]
+    [Required(ErrorMessage = "Val_PasswordRequired")]
+    [MinLength(6, ErrorMessage = "Val_PasswordMin6")]
     public string NewPassword { get; set; } = string.Empty;
 
-    [Required(ErrorMessage = "Confirme a nova senha.")]
-    [Compare(nameof(NewPassword), ErrorMessage = "As senhas não conferem.")]
+    [Required(ErrorMessage = "Val_ConfirmRequired")]
+    [Compare(nameof(NewPassword), ErrorMessage = "Val_PasswordMismatch")]
     public string ConfirmNewPassword { get; set; } = string.Empty;
 }

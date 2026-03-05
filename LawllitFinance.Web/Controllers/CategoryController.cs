@@ -1,35 +1,18 @@
-using LawllitFinance.Data.Entities;
-using LawllitFinance.Data.Repositories.Interfaces;
 using LawllitFinance.Web.Models;
+using LawllitFinance.Web.Services.Interfaces;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Localization;
 
 namespace LawllitFinance.Web.Controllers;
 
 [Authorize]
-public class CategoryController(ICategoryRepository categoryRepository) : BaseController
+public class CategoryController(ICategoryService categoryService, IStringLocalizer<SharedResource> localizer) : BaseController
 {
     [HttpGet]
     public async Task<IActionResult> Index(string? type, string? search)
     {
-        var userId = GetUserId();
-        var categories = await categoryRepository.GetAllByUserAsync(userId);
-
-        if (!string.IsNullOrWhiteSpace(type) && Enum.TryParse<TransactionType>(type, out var parsedType))
-            categories = categories.Where(c => c.Type == parsedType).ToList();
-
-        if (!string.IsNullOrWhiteSpace(search))
-            categories = categories
-                .Where(c => c.Name.Contains(search, StringComparison.OrdinalIgnoreCase))
-                .ToList();
-
-        var viewModel = new CategoryListViewModel
-        {
-            Categories = categories,
-            FilterType = type,
-            FilterSearch = search,
-        };
-
+        var viewModel = await categoryService.GetListViewModelAsync(GetUserId(), type, search);
         return View(viewModel);
     }
 
@@ -39,30 +22,18 @@ public class CategoryController(ICategoryRepository categoryRepository) : BaseCo
     {
         if (!ModelState.IsValid)
         {
-            TempData["Error"] = "Nome da categoria é obrigatório.";
+            TempData["Error"] = localizer["Msg_CatNameRequired"].Value;
             return RedirectToAction("Index");
         }
 
-        var userId = GetUserId();
-
-        if (await categoryRepository.ExistsAsync(userId, categoryForm.Name, categoryForm.Type))
+        var errorKey = await categoryService.CreateAsync(GetUserId(), categoryForm);
+        if (errorKey is not null)
         {
-            TempData["Error"] = "Já existe uma categoria com este nome e tipo.";
+            TempData["Error"] = localizer[errorKey].Value;
             return RedirectToAction("Index");
         }
 
-        var category = new Category
-        {
-            Id = Guid.NewGuid(),
-            Name = categoryForm.Name.Trim(),
-            Type = categoryForm.Type,
-            UserId = userId,
-        };
-
-        await categoryRepository.AddAsync(category);
-        await categoryRepository.SaveChangesAsync();
-
-        TempData["Success"] = "Categoria criada com sucesso.";
+        TempData["Success"] = localizer["Msg_CatCreated"].Value;
         return RedirectToAction("Index");
     }
 
@@ -72,29 +43,18 @@ public class CategoryController(ICategoryRepository categoryRepository) : BaseCo
     {
         if (!ModelState.IsValid)
         {
-            TempData["Error"] = "Nome da categoria é obrigatório.";
+            TempData["Error"] = localizer["Msg_CatNameRequired"].Value;
             return RedirectToAction("Index");
         }
 
-        var userId = GetUserId();
-        var category = await categoryRepository.GetByIdAsync(userId, id);
-        if (category is null)
+        var errorKey = await categoryService.EditAsync(GetUserId(), id, categoryForm);
+        if (errorKey is not null)
         {
-            TempData["Error"] = "Categoria não encontrada.";
+            TempData["Error"] = localizer[errorKey].Value;
             return RedirectToAction("Index");
         }
 
-        if (await categoryRepository.ExistsAsync(userId, categoryForm.Name, categoryForm.Type, excludeId: id))
-        {
-            TempData["Error"] = "Já existe uma categoria com este nome e tipo.";
-            return RedirectToAction("Index");
-        }
-
-        category.Name = categoryForm.Name.Trim();
-        category.Type = categoryForm.Type;
-        await categoryRepository.SaveChangesAsync();
-
-        TempData["Success"] = "Categoria atualizada com sucesso.";
+        TempData["Success"] = localizer["Msg_CatUpdated"].Value;
         return RedirectToAction("Index");
     }
 
@@ -102,24 +62,14 @@ public class CategoryController(ICategoryRepository categoryRepository) : BaseCo
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> Delete(Guid id)
     {
-        var userId = GetUserId();
-        var category = await categoryRepository.GetByIdAsync(userId, id);
-        if (category is null)
+        var errorKey = await categoryService.DeleteAsync(GetUserId(), id);
+        if (errorKey is not null)
         {
-            TempData["Error"] = "Categoria não encontrada.";
+            TempData["Error"] = localizer[errorKey].Value;
             return RedirectToAction("Index");
         }
 
-        if (await categoryRepository.HasTransactionsAsync(userId, id))
-        {
-            TempData["Error"] = "Não é possível excluir uma categoria com transações vinculadas.";
-            return RedirectToAction("Index");
-        }
-
-        await categoryRepository.DeleteAsync(category);
-        await categoryRepository.SaveChangesAsync();
-
-        TempData["Success"] = "Categoria excluída com sucesso.";
+        TempData["Success"] = localizer["Msg_CatDeleted"].Value;
         return RedirectToAction("Index");
     }
 }

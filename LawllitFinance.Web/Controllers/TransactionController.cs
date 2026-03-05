@@ -1,47 +1,18 @@
-using LawllitFinance.Data.Entities;
-using LawllitFinance.Data.Repositories.Interfaces;
 using LawllitFinance.Web.Models;
+using LawllitFinance.Web.Services.Interfaces;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Localization;
 
 namespace LawllitFinance.Web.Controllers;
 
 [Authorize]
-public class TransactionController(
-    ITransactionRepository transactionRepository,
-    ICategoryRepository categoryRepository) : BaseController
+public class TransactionController(ITransactionService transactionService, IStringLocalizer<SharedResource> localizer) : BaseController
 {
     [HttpGet]
     public async Task<IActionResult> Index(string? type, int? month, int? year, string? search)
     {
-        var userId = GetUserId();
-        var now = DateTime.Now;
-        var selectedMonth = month ?? now.Month;
-        var selectedYear = year ?? now.Year;
-
-        var transactions = await transactionRepository.GetFilteredAsync(userId, type, selectedMonth, selectedYear);
-
-        if (!string.IsNullOrWhiteSpace(search))
-            transactions = transactions
-                .Where(t => t.Description != null && t.Description.Contains(search, StringComparison.OrdinalIgnoreCase))
-                .ToList();
-
-        var categories = await categoryRepository.GetAllByUserAsync(userId);
-        var pendingRecurringCount = await transactionRepository.GetPendingRecurringCountAsync(userId, selectedMonth, selectedYear);
-
-        var viewModel = new TransactionListViewModel
-        {
-            Transactions = transactions,
-            Categories = categories,
-            FilterType = type,
-            FilterSearch = search,
-            FilterMonth = selectedMonth,
-            FilterYear = selectedYear,
-            TotalIncome = transactions.Where(t => t.Type == TransactionType.Income).Sum(t => t.Amount),
-            TotalExpenses = transactions.Where(t => t.Type == TransactionType.Expense).Sum(t => t.Amount),
-            PendingRecurringCount = pendingRecurringCount,
-        };
-
+        var viewModel = await transactionService.GetListViewModelAsync(GetUserId(), type, month, year, search);
         return View(viewModel);
     }
 
@@ -51,35 +22,18 @@ public class TransactionController(
     {
         if (!ModelState.IsValid)
         {
-            TempData["Error"] = "Dados inválidos.";
+            TempData["Error"] = localizer["Msg_DataInvalid"].Value;
             return RedirectToAction("Index");
         }
 
-        var userId = GetUserId();
-        var category = await categoryRepository.GetByIdAsync(userId, transactionForm.CategoryId);
-        if (category is null)
+        var errorKey = await transactionService.CreateAsync(GetUserId(), transactionForm);
+        if (errorKey is not null)
         {
-            TempData["Error"] = "Categoria não encontrada.";
+            TempData["Error"] = localizer[errorKey].Value;
             return RedirectToAction("Index");
         }
 
-        var transaction = new Transaction
-        {
-            Id = Guid.NewGuid(),
-            Description = transactionForm.Description?.Trim() ?? "",
-            Amount = transactionForm.Amount,
-            Type = transactionForm.Type,
-            Date = DateTime.SpecifyKind(transactionForm.Date.Date, DateTimeKind.Utc),
-            UserId = userId,
-            CategoryId = transactionForm.CategoryId,
-            IsRecurring = transactionForm.IsRecurring,
-            CreatedAt = DateTime.UtcNow,
-        };
-
-        await transactionRepository.AddAsync(transaction);
-        await transactionRepository.SaveChangesAsync();
-
-        TempData["Success"] = "Transação criada com sucesso.";
+        TempData["Success"] = localizer["Msg_TransCreated"].Value;
         return RedirectToAction("Index");
     }
 
@@ -89,35 +43,18 @@ public class TransactionController(
     {
         if (!ModelState.IsValid)
         {
-            TempData["Error"] = "Dados inválidos.";
+            TempData["Error"] = localizer["Msg_DataInvalid"].Value;
             return RedirectToAction("Index");
         }
 
-        var userId = GetUserId();
-        var transaction = await transactionRepository.GetByIdAsync(userId, id);
-        if (transaction is null)
+        var errorKey = await transactionService.EditAsync(GetUserId(), id, transactionForm);
+        if (errorKey is not null)
         {
-            TempData["Error"] = "Transação não encontrada.";
+            TempData["Error"] = localizer[errorKey].Value;
             return RedirectToAction("Index");
         }
 
-        var category = await categoryRepository.GetByIdAsync(userId, transactionForm.CategoryId);
-        if (category is null)
-        {
-            TempData["Error"] = "Categoria não encontrada.";
-            return RedirectToAction("Index");
-        }
-
-        transaction.Description = transactionForm.Description?.Trim() ?? "";
-        transaction.Amount = transactionForm.Amount;
-        transaction.Type = transactionForm.Type;
-        transaction.Date = DateTime.SpecifyKind(transactionForm.Date.Date, DateTimeKind.Utc);
-        transaction.CategoryId = transactionForm.CategoryId;
-        transaction.IsRecurring = transactionForm.IsRecurring;
-
-        await transactionRepository.SaveChangesAsync();
-
-        TempData["Success"] = "Transação atualizada com sucesso.";
+        TempData["Success"] = localizer["Msg_TransUpdated"].Value;
         return RedirectToAction("Index");
     }
 
@@ -125,18 +62,14 @@ public class TransactionController(
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> Delete(Guid id)
     {
-        var userId = GetUserId();
-        var transaction = await transactionRepository.GetByIdAsync(userId, id);
-        if (transaction is null)
+        var errorKey = await transactionService.DeleteAsync(GetUserId(), id);
+        if (errorKey is not null)
         {
-            TempData["Error"] = "Transação não encontrada.";
+            TempData["Error"] = localizer[errorKey].Value;
             return RedirectToAction("Index");
         }
 
-        await transactionRepository.DeleteAsync(transaction);
-        await transactionRepository.SaveChangesAsync();
-
-        TempData["Success"] = "Transação excluída com sucesso.";
+        TempData["Success"] = localizer["Msg_TransDeleted"].Value;
         return RedirectToAction("Index");
     }
 
@@ -144,33 +77,8 @@ public class TransactionController(
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> ImportRecurring(int month, int year)
     {
-        var userId = GetUserId();
-        var previousTransactions = await transactionRepository.GetRecurringForImportAsync(userId, month, year);
-
-        foreach (var previousTransaction in previousTransactions)
-        {
-            var newDate = new DateTime(year, month, Math.Min(previousTransaction.Date.Day, DateTime.DaysInMonth(year, month)));
-            await transactionRepository.AddAsync(new Transaction
-            {
-                Id = Guid.NewGuid(),
-                Description = previousTransaction.Description,
-                Amount = previousTransaction.Amount,
-                Type = previousTransaction.Type,
-                Date = DateTime.SpecifyKind(newDate, DateTimeKind.Utc),
-                UserId = userId,
-                CategoryId = previousTransaction.CategoryId,
-                IsRecurring = true,
-                CreatedAt = DateTime.UtcNow,
-            });
-        }
-
-        await transactionRepository.SaveChangesAsync();
-
-        var count = previousTransactions.Count;
-        TempData["Success"] = count == 1
-            ? "1 transação recorrente importada com sucesso."
-            : $"{count} transações recorrentes importadas com sucesso.";
-
+        var importedCount = await transactionService.ImportRecurringTransactionsAsync(GetUserId(), month, year);
+        TempData["Success"] = string.Format(localizer["Msg_RecurringImported"].Value, importedCount);
         return RedirectToAction("Index");
     }
 }

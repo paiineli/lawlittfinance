@@ -5,7 +5,6 @@ public class QuoteViewModel
     public string Label { get; set; } = string.Empty;
     public string FlagEmoji { get; set; } = string.Empty;
     public decimal BuyRate { get; set; }
-    public decimal SellRate { get; set; }
     public decimal DailyHigh { get; set; }
     public decimal DailyLow { get; set; }
     public decimal PctChange { get; set; }

@@ -1,16 +1,15 @@
-using LawllitFinance.Data.Entities;
-using LawllitFinance.Data.Repositories.Interfaces;
 using LawllitFinance.Web.Models;
-using LawllitFinance.Web.Services;
+using LawllitFinance.Web.Services.Interfaces;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authentication.Google;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Localization;
 using System.Security.Claims;
 
 namespace LawllitFinance.Web.Controllers;
 
-public class AuthController(IUserRepository userRepository, IEmailService emailService) : Controller
+public class AuthController(IAuthService authService, IEmailService emailService, IStringLocalizer<SharedResource> localizer) : BaseController
 {
     [HttpGet]
     public IActionResult Login()
@@ -26,16 +25,10 @@ public class AuthController(IUserRepository userRepository, IEmailService emailS
     {
         if (!ModelState.IsValid) return View(loginForm);
 
-        var user = await userRepository.GetByEmailAsync(loginForm.Email);
-        if (user is null || user.PasswordHash is null || !BCrypt.Net.BCrypt.Verify(loginForm.Password, user.PasswordHash))
+        var (user, errorKey) = await authService.ValidateLoginAsync(loginForm.Email, loginForm.Password);
+        if (user is null)
         {
-            ModelState.AddModelError(string.Empty, "E-mail ou senha incorretos.");
-            return View(loginForm);
-        }
-
-        if (!user.EmailConfirmed)
-        {
-            ModelState.AddModelError(string.Empty, "Confirme seu e-mail antes de entrar.");
+            ModelState.AddModelError(string.Empty, localizer[errorKey!]);
             return View(loginForm);
         }
 
@@ -57,53 +50,29 @@ public class AuthController(IUserRepository userRepository, IEmailService emailS
     {
         if (!ModelState.IsValid) return View(registerForm);
 
-        var existingUser = await userRepository.GetByEmailAsync(registerForm.Email);
-        if (existingUser is not null)
+        var (user, errorKey) = await authService.RegisterAsync(registerForm.Name, registerForm.Email, registerForm.Password);
+        if (user is null)
         {
-            ModelState.AddModelError(nameof(registerForm.Email), "Este e-mail já está cadastrado.");
+            ModelState.AddModelError(nameof(registerForm.Email), localizer[errorKey!]);
             return View(registerForm);
         }
 
-        var confirmToken = Guid.NewGuid().ToString("N");
+        var confirmUrl = Url.Action("ConfirmEmail", "Auth", new { token = user.EmailConfirmationToken }, Request.Scheme)!;
+        await emailService.SendConfirmationEmailAsync(user.Email, user.Name, confirmUrl, user.Language);
 
-        var user = new User
-        {
-            Id = Guid.NewGuid(),
-            Name = System.Globalization.CultureInfo.CurrentCulture.TextInfo
-                       .ToTitleCase(registerForm.Name.Trim().ToLower()),
-            Email = registerForm.Email.Trim().ToLower(),
-            PasswordHash = BCrypt.Net.BCrypt.HashPassword(registerForm.Password),
-            EmailConfirmed = false,
-            EmailConfirmationToken = confirmToken,
-            EmailConfirmationTokenExpiry = DateTime.UtcNow.AddHours(24),
-            CreatedAt = DateTime.UtcNow
-        };
-
-        await userRepository.AddAsync(user);
-        await userRepository.SaveChangesAsync();
-
-        var confirmUrl = Url.Action("ConfirmEmail", "Auth", new { token = confirmToken }, Request.Scheme)!;
-        await emailService.SendConfirmationEmailAsync(user.Email, user.Name, confirmUrl);
-
-        TempData["Success"] = "Conta registrada! Verifique seu e-mail para ativar o acesso.";
+        TempData["Success"] = localizer["Msg_EmailConfirmSent"].Value;
         return RedirectToAction("Login");
     }
 
     [HttpGet]
     public async Task<IActionResult> ConfirmEmail(string token)
     {
-        var user = await userRepository.GetByConfirmationTokenAsync(token);
-
-        if (user is null || user.EmailConfirmationTokenExpiry < DateTime.UtcNow)
+        var user = await authService.ConfirmEmailAsync(token);
+        if (user is null)
         {
-            TempData["Error"] = "Link inválido ou expirado.";
+            TempData["Error"] = localizer["Msg_InvalidLink"].Value;
             return RedirectToAction("Login");
         }
-
-        user.EmailConfirmed = true;
-        user.EmailConfirmationToken = null;
-        user.EmailConfirmationTokenExpiry = null;
-        await userRepository.SaveChangesAsync();
 
         await SignInAsync(user);
         return RedirectToAction("Index", "Dashboard");
@@ -126,29 +95,23 @@ public class AuthController(IUserRepository userRepository, IEmailService emailS
     {
         if (!ModelState.IsValid) return View(forgotPasswordForm);
 
-        var user = await userRepository.GetByEmailAsync(forgotPasswordForm.Email.Trim().ToLower());
-        if (user is not null && user.EmailConfirmed)
+        var result = await authService.BeginPasswordResetAsync(forgotPasswordForm.Email.Trim().ToLower());
+        if (result is not null)
         {
-            var resetToken = Guid.NewGuid().ToString("N");
-            user.PasswordResetToken = resetToken;
-            user.PasswordResetTokenExpiry = DateTime.UtcNow.AddHours(1);
-            await userRepository.SaveChangesAsync();
-
-            var resetUrl = Url.Action("ResetPassword", "Auth", new { token = resetToken }, Request.Scheme)!;
-            await emailService.SendPasswordResetEmailAsync(user.Email, user.Name, resetUrl);
+            var resetUrl = Url.Action("ResetPassword", "Auth", new { token = result.Value.Token }, Request.Scheme)!;
+            await emailService.SendPasswordResetEmailAsync(result.Value.User.Email, result.Value.User.Name, resetUrl, result.Value.User.Language);
         }
 
-        TempData["Success"] = "Se o e-mail estiver cadastrado, você receberá as instruções em breve.";
+        TempData["Success"] = localizer["Msg_ForgotEmailSent"].Value;
         return RedirectToAction("Login");
     }
 
     [HttpGet]
     public async Task<IActionResult> ResetPassword(string token)
     {
-        var user = await userRepository.GetByPasswordResetTokenAsync(token);
-        if (user is null || user.PasswordResetTokenExpiry < DateTime.UtcNow)
+        if (!await authService.ValidatePasswordResetTokenAsync(token))
         {
-            TempData["Error"] = "Link inválido ou expirado.";
+            TempData["Error"] = localizer["Msg_InvalidLink"].Value;
             return RedirectToAction("Login");
         }
 
@@ -161,19 +124,14 @@ public class AuthController(IUserRepository userRepository, IEmailService emailS
     {
         if (!ModelState.IsValid) return View(resetPasswordForm);
 
-        var user = await userRepository.GetByPasswordResetTokenAsync(resetPasswordForm.Token);
-        if (user is null || user.PasswordResetTokenExpiry < DateTime.UtcNow)
+        var errorKey = await authService.ResetPasswordAsync(resetPasswordForm.Token, resetPasswordForm.Password);
+        if (errorKey is not null)
         {
-            TempData["Error"] = "Link inválido ou expirado.";
+            TempData["Error"] = localizer[errorKey].Value;
             return RedirectToAction("Login");
         }
 
-        user.PasswordHash = BCrypt.Net.BCrypt.HashPassword(resetPasswordForm.Password);
-        user.PasswordResetToken = null;
-        user.PasswordResetTokenExpiry = null;
-        await userRepository.SaveChangesAsync();
-
-        TempData["Success"] = "Senha redefinida com sucesso! Faça login.";
+        TempData["Success"] = localizer["Msg_PasswordReset"].Value;
         return RedirectToAction("Login");
     }
 
@@ -193,48 +151,12 @@ public class AuthController(IUserRepository userRepository, IEmailService emailS
         var googleId = result.Principal!.FindFirstValue(ClaimTypes.NameIdentifier);
         var email = result.Principal!.FindFirstValue(ClaimTypes.Email);
         if (googleId is null || email is null) return RedirectToAction("Login");
-        var rawNameFromOAuth = result.Principal!.FindFirstValue(ClaimTypes.Name) ?? email;
-        var name = System.Globalization.CultureInfo.CurrentCulture.TextInfo
-                                   .ToTitleCase(rawNameFromOAuth.Trim().ToLower());
 
-        var user = await userRepository.GetByGoogleIdAsync(googleId)
-                ?? await userRepository.GetByEmailAsync(email);
-
-        if (user is null)
-        {
-            user = new User { Id = Guid.NewGuid(), Name = name, Email = email, GoogleId = googleId, EmailConfirmed = true };
-            await userRepository.AddAsync(user);
-            await userRepository.SaveChangesAsync();
-        }
-        else if (user.GoogleId is null)
-        {
-            user.GoogleId = googleId;
-            user.EmailConfirmed = true;
-            await userRepository.SaveChangesAsync();
-        }
+        var name = StringHelpers.ToTitleCase(result.Principal!.FindFirstValue(ClaimTypes.Name) ?? email);
+        var user = await authService.GetOrCreateGoogleUserAsync(googleId, email, name);
 
         await HttpContext.SignOutAsync("External");
         await SignInAsync(user);
         return RedirectToAction("Index", "Dashboard");
-    }
-
-    private async Task SignInAsync(User user)
-    {
-        var claims = new List<Claim>
-        {
-            new(ClaimTypes.NameIdentifier, user.Id.ToString()),
-            new(ClaimTypes.Name,           user.Name),
-            new(ClaimTypes.Email,          user.Email),
-            new("theme",                   user.Theme),
-            new("font_size",               user.FontSize),
-        };
-
-        var identity  = new ClaimsIdentity(claims, CookieAuthenticationDefaults.AuthenticationScheme);
-        var principal = new ClaimsPrincipal(identity);
-
-        await HttpContext.SignInAsync(
-            CookieAuthenticationDefaults.AuthenticationScheme,
-            principal,
-            new AuthenticationProperties { IsPersistent = true });
     }
 }

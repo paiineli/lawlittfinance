@@ -3,8 +3,8 @@
     var line2Element = document.getElementById('typewriter-line2');
     if (!line1Element || !line2Element) return;
 
-    var line1Text = 'Suas finanças.';
-    var line2Text = 'Simples assim.';
+    var line1Text = line1Element.dataset.text;
+    var line2Text = line2Element.dataset.text;
     var charDelay = 60;
 
     function typeText(element, text, onComplete) {

@@ -9,7 +9,7 @@
 - **Auth:** Cookie-based (BCrypt) + Google OAuth 2.0 + e-mail confirmation
 - **Email:** MailKit/MimeKit via Brevo SMTP
 - **Frontend:** Razor Views, Bootstrap 5.3.3 (CDN), Bootstrap Icons 1.11.3 (CDN), Chart.js 4.4.4 (CDN), vanilla JS
-- **Pattern:** Repository Pattern + MVC
+- **Pattern:** Repository Pattern + Service Layer + MVC
 
 ---
 
@@ -37,6 +37,9 @@ lawlittfinance/
 └── LawllitFinance.Web/
     ├── Program.cs
     ├── appsettings.json
+    ├── Constants.cs
+    ├── StringHelpers.cs
+    ├── SharedResource.cs
     ├── Controllers/
     │   ├── BaseController.cs
     │   ├── HomeController.cs
@@ -57,10 +60,32 @@ lawlittfinance/
     │   ├── CategoryFormViewModel.cs
     │   ├── CategoryListViewModel.cs
     │   ├── ProfileViewModel.cs
+    │   ├── SaveThemeViewModel.cs
+    │   ├── SaveFontSizeViewModel.cs
+    │   ├── SaveLanguageViewModel.cs
+    │   ├── EditNameViewModel.cs
+    │   ├── EditEmailViewModel.cs
+    │   ├── ChangePasswordViewModel.cs
     │   └── QuoteViewModel.cs
     ├── Services/
-    │   ├── IEmailService.cs
-    │   └── EmailService.cs
+    │   ├── Interfaces/
+    │   │   ├── IAuthService.cs
+    │   │   ├── IEmailService.cs
+    │   │   ├── IDashboardService.cs
+    │   │   ├── ITransactionService.cs
+    │   │   ├── ICategoryService.cs
+    │   │   ├── IProfileService.cs
+    │   │   └── IQuotesService.cs
+    │   ├── AuthService.cs
+    │   ├── EmailService.cs
+    │   ├── DashboardService.cs
+    │   ├── TransactionService.cs
+    │   ├── CategoryService.cs
+    │   ├── ProfileService.cs
+    │   └── QuotesService.cs
+    ├── Resources/
+    │   ├── SharedResource.resx        (pt-BR — default)
+    │   └── SharedResource.en-US.resx  (en-US)
     ├── Views/
     │   ├── Auth/         (Login, Register, ForgotPassword, ResetPassword)
     │   ├── Home/         (Index — landing page)
@@ -75,10 +100,9 @@ lawlittfinance/
         └── js/
             ├── app.js        (global event delegation)
             ├── dashboard.js  (charts + ranking bars)
-            └── home.js       (typewriter animation)
+            ├── home.js       (typewriter animation)
+            └── profile.js    (theme / font size / language AJAX)
 ```
-
----
 
 ## Deploy
 

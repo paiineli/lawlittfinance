@@ -1,17 +1,26 @@
 using LawllitFinance.Data;
 using LawllitFinance.Data.Repositories;
 using LawllitFinance.Data.Repositories.Interfaces;
+using LawllitFinance.Web;
 using LawllitFinance.Web.Services;
+using LawllitFinance.Web.Services.Interfaces;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.HttpOverrides;
+using Microsoft.AspNetCore.Localization;
 using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
 
+builder.Services.AddLocalization();
+
 builder.Services.AddControllersWithViews()
     .AddJsonOptions(options =>
         options.JsonSerializerOptions.Converters.Add(
-            new System.Text.Json.Serialization.JsonStringEnumConverter()));
+            new System.Text.Json.Serialization.JsonStringEnumConverter()))
+    .AddViewLocalization()
+    .AddDataAnnotationsLocalization(options =>
+        options.DataAnnotationLocalizerProvider = (type, factory) =>
+            factory.Create(typeof(SharedResource)));
 
 builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseNpgsql(
@@ -22,9 +31,15 @@ builder.Services.AddDbContext<AppDbContext>(options =>
             errorCodesToAdd: null)));
 
 builder.Services.AddScoped<IUserRepository, UserRepository>();
-builder.Services.AddScoped<IEmailService, EmailService>();
 builder.Services.AddScoped<ICategoryRepository, CategoryRepository>();
 builder.Services.AddScoped<ITransactionRepository, TransactionRepository>();
+builder.Services.AddScoped<IEmailService, EmailService>();
+builder.Services.AddScoped<IAuthService, AuthService>();
+builder.Services.AddScoped<IDashboardService, DashboardService>();
+builder.Services.AddScoped<ITransactionService, TransactionService>();
+builder.Services.AddScoped<ICategoryService, CategoryService>();
+builder.Services.AddScoped<IProfileService, ProfileService>();
+builder.Services.AddScoped<IQuotesService, QuotesService>();
 
 builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
     .AddCookie(options =>
@@ -71,6 +86,16 @@ app.UseForwardedHeaders(forwardedOptions);
 
 app.UseStaticFiles();
 app.UseAuthentication();
+
+var localizationOptions = new RequestLocalizationOptions()
+    .SetDefaultCulture("pt-BR")
+    .AddSupportedCultures("pt-BR", "en-US")
+    .AddSupportedUICultures("pt-BR", "en-US");
+
+localizationOptions.RequestCultureProviders.Insert(0, new ClaimCultureProvider());
+localizationOptions.RequestCultureProviders.Insert(1, new CookieRequestCultureProvider());
+app.UseRequestLocalization(localizationOptions);
+
 app.UseAuthorization();
 
 app.MapControllerRoute(
@@ -83,3 +108,13 @@ app.MapControllerRoute(
     pattern: "{controller}/{action=Index}/{id?}");
 
 app.Run();
+
+public class ClaimCultureProvider : RequestCultureProvider
+{
+    public override Task<ProviderCultureResult?> DetermineProviderCultureResult(HttpContext httpContext)
+    {
+        var language = httpContext.User.FindFirst("language")?.Value;
+        if (language is null) return NullProviderCultureResult;
+        return Task.FromResult<ProviderCultureResult?>(new ProviderCultureResult(culture: "pt-BR", uiCulture: language));
+    }
+}

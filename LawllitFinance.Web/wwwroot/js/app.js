@@ -1,3 +1,29 @@
+function normalizeText(text) {
+    return text.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+}
+
+function applyLiveSearch(searchInput) {
+    var searchValue = normalizeText(searchInput.value.trim());
+    var tableBody = document.querySelector('[data-search-table]');
+    if (!tableBody) return;
+    var dataRows = tableBody.querySelectorAll('[data-search-row]');
+    var visibleCount = 0;
+    dataRows.forEach(function (row) {
+        var matches = normalizeText(row.textContent).includes(searchValue);
+        row.hidden = !matches;
+        if (matches) visibleCount++;
+    });
+    var emptyRow = tableBody.querySelector('[data-search-empty]');
+    if (emptyRow) emptyRow.hidden = visibleCount > 0 || dataRows.length === 0;
+}
+
+document.addEventListener('input', function (event) {
+    if (event.target.matches('[data-live-search]')) applyLiveSearch(event.target);
+});
+
+var initialSearchInput = document.querySelector('[data-live-search]');
+if (initialSearchInput && initialSearchInput.value) applyLiveSearch(initialSearchInput);
+
 document.addEventListener('change', function (event) {
     if (event.target.matches('[data-auto-submit]')) event.target.form.submit();
     if (event.target.matches('[data-filter-type]')) filterCategoriesByType(event.target);
@@ -30,16 +56,16 @@ function filterCategoriesByType(typeSelect) {
     if (!modalBody) return;
     var categorySelect = modalBody.querySelector('[data-filter-category]');
     if (!categorySelect) return;
-    var type = typeSelect.value;
-    var expenseGroup = categorySelect.querySelector('optgroup[label="Despesas"]');
-    var incomeGroup = categorySelect.querySelector('optgroup[label="Receitas"]');
-    if (expenseGroup) expenseGroup.hidden = type === 'Income';
-    if (incomeGroup) incomeGroup.hidden = type === 'Expense';
-    var selected = categorySelect.options[categorySelect.selectedIndex];
-    if (selected && selected.closest('optgroup') && selected.closest('optgroup').hidden) {
-        var firstVisible = Array.from(categorySelect.options).find(function (option) {
-            return !option.closest('optgroup') || !option.closest('optgroup').hidden;
+    var selectedType = typeSelect.value;
+    categorySelect.querySelectorAll('optgroup[data-group-type]').forEach(function (optgroup) {
+        optgroup.hidden = optgroup.dataset.groupType !== selectedType;
+    });
+    var selectedOption = categorySelect.options[categorySelect.selectedIndex];
+    if (selectedOption && selectedOption.closest('optgroup') && selectedOption.closest('optgroup').hidden) {
+        var firstVisibleOption = Array.from(categorySelect.options).find(function (option) {
+            var parentGroup = option.closest('optgroup');
+            return !parentGroup || !parentGroup.hidden;
         });
-        if (firstVisible) categorySelect.value = firstVisible.value;
+        if (firstVisibleOption) categorySelect.value = firstVisibleOption.value;
     }
 }

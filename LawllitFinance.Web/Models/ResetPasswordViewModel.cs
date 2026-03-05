@@ -7,11 +7,11 @@ public class ResetPasswordViewModel
     [Required]
     public string Token { get; set; } = string.Empty;
 
-    [Required(ErrorMessage = "Senha é obrigatória")]
-    [MinLength(6, ErrorMessage = "Mínimo 6 caracteres")]
+    [Required(ErrorMessage = "Val_PasswordRequired")]
+    [MinLength(6, ErrorMessage = "Val_Min6Chars")]
     public string Password { get; set; } = string.Empty;
 
-    [Required(ErrorMessage = "Confirmação é obrigatória")]
-    [Compare(nameof(Password), ErrorMessage = "As senhas não coincidem")]
+    [Required(ErrorMessage = "Val_ConfirmRequired")]
+    [Compare(nameof(Password), ErrorMessage = "Val_PasswordMismatch")]
     public string ConfirmPassword { get; set; } = string.Empty;
 }

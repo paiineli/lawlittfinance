@@ -7,18 +7,18 @@ public class TransactionFormViewModel
 {
     public Guid? Id { get; set; }
 
-    [StringLength(200, ErrorMessage = "Descrição não pode exceder 200 caracteres")]
+    [StringLength(200, ErrorMessage = "Val_DescriptionMaxLength")]
     public string? Description { get; set; }
 
-    [Range(0.01, double.MaxValue, ErrorMessage = "Valor deve ser maior que zero")]
+    [Range(0.01, double.MaxValue, ErrorMessage = "Val_AmountRange")]
     public decimal Amount { get; set; }
 
     public TransactionType Type { get; set; } = TransactionType.Expense;
 
-    [Required(ErrorMessage = "Data é obrigatória")]
+    [Required(ErrorMessage = "Val_DateRequired")]
     public DateTime Date { get; set; } = DateTime.Today;
 
-    [Required(ErrorMessage = "Categoria é obrigatória")]
+    [Required(ErrorMessage = "Val_CategoryRequired")]
     public Guid CategoryId { get; set; }
 
     public bool IsRecurring { get; set; } = false;
