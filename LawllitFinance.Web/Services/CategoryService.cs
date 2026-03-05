@@ -1,7 +1,6 @@
 using LawllitFinance.Data.Entities;
 using LawllitFinance.Data.Repositories.Interfaces;
 using LawllitFinance.Web.Models;
-
 using LawllitFinance.Web.Services.Interfaces;
 
 namespace LawllitFinance.Web.Services;
@@ -28,10 +27,10 @@ public class CategoryService(ICategoryRepository categoryRepository) : ICategory
         };
     }
 
-    public async Task<string?> CreateAsync(Guid userId, CategoryFormViewModel form)
+    public async Task<Result> CreateAsync(Guid userId, CategoryFormViewModel form)
     {
         if (await categoryRepository.ExistsAsync(userId, form.Name, form.Type))
-            return "Msg_CatAlreadyExists";
+            return Result.Failure("Msg_CatAlreadyExists");
 
         await categoryRepository.AddAsync(new Category
         {
@@ -42,35 +41,35 @@ public class CategoryService(ICategoryRepository categoryRepository) : ICategory
         });
 
         await categoryRepository.SaveChangesAsync();
-        return null;
+        return Result.Success();
     }
 
-    public async Task<string?> EditAsync(Guid userId, Guid id, CategoryFormViewModel form)
+    public async Task<Result> EditAsync(Guid userId, Guid id, CategoryFormViewModel form)
     {
         var category = await categoryRepository.GetByIdAsync(userId, id);
         if (category is null)
-            return "Msg_CatNotFound";
+            return Result.Failure("Msg_CatNotFound");
 
         if (await categoryRepository.ExistsAsync(userId, form.Name, form.Type, excludeId: id))
-            return "Msg_CatAlreadyExists";
+            return Result.Failure("Msg_CatAlreadyExists");
 
         category.Name = form.Name.Trim();
         category.Type = form.Type;
         await categoryRepository.SaveChangesAsync();
-        return null;
+        return Result.Success();
     }
 
-    public async Task<string?> DeleteAsync(Guid userId, Guid id)
+    public async Task<Result> DeleteAsync(Guid userId, Guid id)
     {
         var category = await categoryRepository.GetByIdAsync(userId, id);
         if (category is null)
-            return "Msg_CatNotFound";
+            return Result.Failure("Msg_CatNotFound");
 
         if (await categoryRepository.HasTransactionsAsync(userId, id))
-            return "Msg_CatHasTransactions";
+            return Result.Failure("Msg_CatHasTransactions");
 
         await categoryRepository.DeleteAsync(category);
         await categoryRepository.SaveChangesAsync();
-        return null;
+        return Result.Success();
     }
 }

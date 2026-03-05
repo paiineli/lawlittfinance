@@ -7,7 +7,9 @@ using LawllitFinance.Web.Services.Interfaces;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.Localization;
+using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
+using System.Threading.RateLimiting;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -65,6 +67,18 @@ builder.Services.AddAuthorization();
 builder.Services.AddMemoryCache();
 builder.Services.AddHttpClient();
 
+builder.Services.AddRateLimiter(options =>
+{
+    options.AddFixedWindowLimiter("auth", limiterOptions =>
+    {
+        limiterOptions.PermitLimit = 5;
+        limiterOptions.Window = TimeSpan.FromMinutes(1);
+        limiterOptions.QueueProcessingOrder = QueueProcessingOrder.OldestFirst;
+        limiterOptions.QueueLimit = 0;
+    });
+    options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+});
+
 var port = Environment.GetEnvironmentVariable("PORT") ?? "80";
 builder.WebHost.UseUrls($"http://0.0.0.0:{port}");
 
@@ -85,6 +99,7 @@ forwardedOptions.KnownProxies.Clear();
 app.UseForwardedHeaders(forwardedOptions);
 
 app.UseStaticFiles();
+app.UseRateLimiter();
 app.UseAuthentication();
 
 var localizationOptions = new RequestLocalizationOptions()

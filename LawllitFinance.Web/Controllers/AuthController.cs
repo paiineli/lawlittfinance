@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authentication.Google;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.Extensions.Localization;
 using System.Security.Claims;
 
@@ -21,18 +22,19 @@ public class AuthController(IAuthService authService, IEmailService emailService
 
     [HttpPost]
     [ValidateAntiForgeryToken]
+    [EnableRateLimiting("auth")]
     public async Task<IActionResult> Login(LoginViewModel loginForm)
     {
         if (!ModelState.IsValid) return View(loginForm);
 
-        var (user, errorKey) = await authService.ValidateLoginAsync(loginForm.Email, loginForm.Password);
-        if (user is null)
+        var result = await authService.ValidateLoginAsync(loginForm.Email, loginForm.Password);
+        if (!result.IsSuccess)
         {
-            ModelState.AddModelError(string.Empty, localizer[errorKey!]);
+            ModelState.AddModelError(string.Empty, localizer[result.ErrorKey!]);
             return View(loginForm);
         }
 
-        await SignInAsync(user);
+        await SignInAsync(result.Value!);
         return RedirectToAction("Index", "Dashboard");
     }
 
@@ -46,19 +48,20 @@ public class AuthController(IAuthService authService, IEmailService emailService
 
     [HttpPost]
     [ValidateAntiForgeryToken]
+    [EnableRateLimiting("auth")]
     public async Task<IActionResult> Register(RegisterViewModel registerForm)
     {
         if (!ModelState.IsValid) return View(registerForm);
 
-        var (user, errorKey) = await authService.RegisterAsync(registerForm.Name, registerForm.Email, registerForm.Password);
-        if (user is null)
+        var result = await authService.RegisterAsync(registerForm.Name, registerForm.Email, registerForm.Password);
+        if (!result.IsSuccess)
         {
-            ModelState.AddModelError(nameof(registerForm.Email), localizer[errorKey!]);
+            ModelState.AddModelError(nameof(registerForm.Email), localizer[result.ErrorKey!]);
             return View(registerForm);
         }
 
-        var confirmUrl = Url.Action("ConfirmEmail", "Auth", new { token = user.EmailConfirmationToken }, Request.Scheme)!;
-        await emailService.SendConfirmationEmailAsync(user.Email, user.Name, confirmUrl, user.Language);
+        var confirmUrl = Url.Action("ConfirmEmail", "Auth", new { token = result.Value!.EmailConfirmationToken }, Request.Scheme)!;
+        await emailService.SendConfirmationEmailAsync(result.Value.Email, result.Value.Name, confirmUrl, result.Value.Language);
 
         TempData["Success"] = localizer["Msg_EmailConfirmSent"].Value;
         return RedirectToAction("Login");
@@ -67,14 +70,14 @@ public class AuthController(IAuthService authService, IEmailService emailService
     [HttpGet]
     public async Task<IActionResult> ConfirmEmail(string token)
     {
-        var user = await authService.ConfirmEmailAsync(token);
-        if (user is null)
+        var result = await authService.ConfirmEmailAsync(token);
+        if (!result.IsSuccess)
         {
-            TempData["Error"] = localizer["Msg_InvalidLink"].Value;
+            TempData["Error"] = localizer[result.ErrorKey!].Value;
             return RedirectToAction("Login");
         }
 
-        await SignInAsync(user);
+        await SignInAsync(result.Value!);
         return RedirectToAction("Index", "Dashboard");
     }
 
@@ -91,15 +94,16 @@ public class AuthController(IAuthService authService, IEmailService emailService
 
     [HttpPost]
     [ValidateAntiForgeryToken]
+    [EnableRateLimiting("auth")]
     public async Task<IActionResult> ForgotPassword(ForgotPasswordViewModel forgotPasswordForm)
     {
         if (!ModelState.IsValid) return View(forgotPasswordForm);
 
-        var result = await authService.BeginPasswordResetAsync(forgotPasswordForm.Email.Trim().ToLower());
-        if (result is not null)
+        var passwordResetResult = await authService.BeginPasswordResetAsync(forgotPasswordForm.Email.Trim().ToLower());
+        if (passwordResetResult.IsSuccess)
         {
-            var resetUrl = Url.Action("ResetPassword", "Auth", new { token = result.Value.Token }, Request.Scheme)!;
-            await emailService.SendPasswordResetEmailAsync(result.Value.User.Email, result.Value.User.Name, resetUrl, result.Value.User.Language);
+            var resetUrl = Url.Action("ResetPassword", "Auth", new { token = passwordResetResult.Value!.Token }, Request.Scheme)!;
+            await emailService.SendPasswordResetEmailAsync(passwordResetResult.Value.User.Email, passwordResetResult.Value.User.Name, resetUrl, passwordResetResult.Value.User.Language);
         }
 
         TempData["Success"] = localizer["Msg_ForgotEmailSent"].Value;
@@ -120,14 +124,15 @@ public class AuthController(IAuthService authService, IEmailService emailService
 
     [HttpPost]
     [ValidateAntiForgeryToken]
+    [EnableRateLimiting("auth")]
     public async Task<IActionResult> ResetPassword(ResetPasswordViewModel resetPasswordForm)
     {
         if (!ModelState.IsValid) return View(resetPasswordForm);
 
-        var errorKey = await authService.ResetPasswordAsync(resetPasswordForm.Token, resetPasswordForm.Password);
-        if (errorKey is not null)
+        var result = await authService.ResetPasswordAsync(resetPasswordForm.Token, resetPasswordForm.Password);
+        if (!result.IsSuccess)
         {
-            TempData["Error"] = localizer[errorKey].Value;
+            TempData["Error"] = localizer[result.ErrorKey!].Value;
             return RedirectToAction("Login");
         }
 
@@ -145,14 +150,14 @@ public class AuthController(IAuthService authService, IEmailService emailService
     [HttpGet]
     public async Task<IActionResult> GoogleCallback()
     {
-        var result = await HttpContext.AuthenticateAsync("External");
-        if (!result.Succeeded) return RedirectToAction("Login");
+        var authResult = await HttpContext.AuthenticateAsync("External");
+        if (!authResult.Succeeded) return RedirectToAction("Login");
 
-        var googleId = result.Principal!.FindFirstValue(ClaimTypes.NameIdentifier);
-        var email = result.Principal!.FindFirstValue(ClaimTypes.Email);
+        var googleId = authResult.Principal!.FindFirstValue(ClaimTypes.NameIdentifier);
+        var email = authResult.Principal!.FindFirstValue(ClaimTypes.Email);
         if (googleId is null || email is null) return RedirectToAction("Login");
 
-        var name = StringHelpers.ToTitleCase(result.Principal!.FindFirstValue(ClaimTypes.Name) ?? email);
+        var name = StringHelpers.ToTitleCase(authResult.Principal!.FindFirstValue(ClaimTypes.Name) ?? email);
         var user = await authService.GetOrCreateGoogleUserAsync(googleId, email, name);
 
         await HttpContext.SignOutAsync("External");

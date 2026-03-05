@@ -26,10 +26,10 @@ public class TransactionController(ITransactionService transactionService, IStri
             return RedirectToAction("Index");
         }
 
-        var errorKey = await transactionService.CreateAsync(GetUserId(), transactionForm);
-        if (errorKey is not null)
+        var result = await transactionService.CreateAsync(GetUserId(), transactionForm);
+        if (!result.IsSuccess)
         {
-            TempData["Error"] = localizer[errorKey].Value;
+            TempData["Error"] = localizer[result.ErrorKey!].Value;
             return RedirectToAction("Index");
         }
 
@@ -47,10 +47,10 @@ public class TransactionController(ITransactionService transactionService, IStri
             return RedirectToAction("Index");
         }
 
-        var errorKey = await transactionService.EditAsync(GetUserId(), id, transactionForm);
-        if (errorKey is not null)
+        var result = await transactionService.EditAsync(GetUserId(), id, transactionForm);
+        if (!result.IsSuccess)
         {
-            TempData["Error"] = localizer[errorKey].Value;
+            TempData["Error"] = localizer[result.ErrorKey!].Value;
             return RedirectToAction("Index");
         }
 
@@ -62,10 +62,10 @@ public class TransactionController(ITransactionService transactionService, IStri
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> Delete(Guid id)
     {
-        var errorKey = await transactionService.DeleteAsync(GetUserId(), id);
-        if (errorKey is not null)
+        var result = await transactionService.DeleteAsync(GetUserId(), id);
+        if (!result.IsSuccess)
         {
-            TempData["Error"] = localizer[errorKey].Value;
+            TempData["Error"] = localizer[result.ErrorKey!].Value;
             return RedirectToAction("Index");
         }
 

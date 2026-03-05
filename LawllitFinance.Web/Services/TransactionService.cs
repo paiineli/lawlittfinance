@@ -1,7 +1,6 @@
 using LawllitFinance.Data.Entities;
 using LawllitFinance.Data.Repositories.Interfaces;
 using LawllitFinance.Web.Models;
-
 using LawllitFinance.Web.Services.Interfaces;
 
 namespace LawllitFinance.Web.Services;
@@ -39,11 +38,11 @@ public class TransactionService(ITransactionRepository transactionRepository, IC
         };
     }
 
-    public async Task<string?> CreateAsync(Guid userId, TransactionFormViewModel form)
+    public async Task<Result> CreateAsync(Guid userId, TransactionFormViewModel form)
     {
         var category = await categoryRepository.GetByIdAsync(userId, form.CategoryId);
         if (category is null)
-            return "Msg_CategoryNotFound";
+            return Result.Failure("Msg_CategoryNotFound");
 
         await transactionRepository.AddAsync(new Transaction
         {
@@ -59,18 +58,18 @@ public class TransactionService(ITransactionRepository transactionRepository, IC
         });
 
         await transactionRepository.SaveChangesAsync();
-        return null;
+        return Result.Success();
     }
 
-    public async Task<string?> EditAsync(Guid userId, Guid id, TransactionFormViewModel form)
+    public async Task<Result> EditAsync(Guid userId, Guid id, TransactionFormViewModel form)
     {
         var transaction = await transactionRepository.GetByIdAsync(userId, id);
         if (transaction is null)
-            return "Msg_TransNotFound";
+            return Result.Failure("Msg_TransNotFound");
 
         var category = await categoryRepository.GetByIdAsync(userId, form.CategoryId);
         if (category is null)
-            return "Msg_CategoryNotFound";
+            return Result.Failure("Msg_CategoryNotFound");
 
         transaction.Description = form.Description?.Trim() ?? "";
         transaction.Amount = form.Amount;
@@ -80,18 +79,18 @@ public class TransactionService(ITransactionRepository transactionRepository, IC
         transaction.IsRecurring = form.IsRecurring;
 
         await transactionRepository.SaveChangesAsync();
-        return null;
+        return Result.Success();
     }
 
-    public async Task<string?> DeleteAsync(Guid userId, Guid id)
+    public async Task<Result> DeleteAsync(Guid userId, Guid id)
     {
         var transaction = await transactionRepository.GetByIdAsync(userId, id);
         if (transaction is null)
-            return "Msg_TransNotFound";
+            return Result.Failure("Msg_TransNotFound");
 
         await transactionRepository.DeleteAsync(transaction);
         await transactionRepository.SaveChangesAsync();
-        return null;
+        return Result.Success();
     }
 
     public async Task<int> ImportRecurringTransactionsAsync(Guid userId, int month, int year)

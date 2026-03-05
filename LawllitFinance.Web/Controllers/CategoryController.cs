@@ -26,10 +26,10 @@ public class CategoryController(ICategoryService categoryService, IStringLocaliz
             return RedirectToAction("Index");
         }
 
-        var errorKey = await categoryService.CreateAsync(GetUserId(), categoryForm);
-        if (errorKey is not null)
+        var result = await categoryService.CreateAsync(GetUserId(), categoryForm);
+        if (!result.IsSuccess)
         {
-            TempData["Error"] = localizer[errorKey].Value;
+            TempData["Error"] = localizer[result.ErrorKey!].Value;
             return RedirectToAction("Index");
         }
 
@@ -47,10 +47,10 @@ public class CategoryController(ICategoryService categoryService, IStringLocaliz
             return RedirectToAction("Index");
         }
 
-        var errorKey = await categoryService.EditAsync(GetUserId(), id, categoryForm);
-        if (errorKey is not null)
+        var result = await categoryService.EditAsync(GetUserId(), id, categoryForm);
+        if (!result.IsSuccess)
         {
-            TempData["Error"] = localizer[errorKey].Value;
+            TempData["Error"] = localizer[result.ErrorKey!].Value;
             return RedirectToAction("Index");
         }
 
@@ -62,10 +62,10 @@ public class CategoryController(ICategoryService categoryService, IStringLocaliz
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> Delete(Guid id)
     {
-        var errorKey = await categoryService.DeleteAsync(GetUserId(), id);
-        if (errorKey is not null)
+        var result = await categoryService.DeleteAsync(GetUserId(), id);
+        if (!result.IsSuccess)
         {
-            TempData["Error"] = localizer[errorKey].Value;
+            TempData["Error"] = localizer[result.ErrorKey!].Value;
             return RedirectToAction("Index");
         }
 

@@ -6,11 +6,11 @@ namespace LawllitFinance.Web.Services.Interfaces;
 public interface IProfileService
 {
     Task<ProfileViewModel?> GetProfileAsync(Guid userId, string? tab);
-    Task<(User? User, string? ErrorKey)> EditNameAsync(Guid userId, string name);
-    Task<(User? User, string? ErrorKey)> EditEmailAsync(Guid userId, EditEmailViewModel form);
-    Task<string?> ChangePasswordAsync(Guid userId, ChangePasswordViewModel form);
-    Task<User?> SaveThemeAsync(Guid userId, string theme);
-    Task<User?> SaveFontSizeAsync(Guid userId, string fontSize);
-    Task<User?> SaveLanguageAsync(Guid userId, string language);
-    Task<string?> DeleteAccountAsync(Guid userId, string? password);
+    Task<Result<User>> EditNameAsync(Guid userId, string name);
+    Task<Result<User>> EditEmailAsync(Guid userId, EditEmailViewModel form);
+    Task<Result> ChangePasswordAsync(Guid userId, ChangePasswordViewModel form);
+    Task<Result<User>> SaveThemeAsync(Guid userId, string theme);
+    Task<Result<User>> SaveFontSizeAsync(Guid userId, string fontSize);
+    Task<Result<User>> SaveLanguageAsync(Guid userId, string language);
+    Task<Result> DeleteAccountAsync(Guid userId, string? password);
 }
