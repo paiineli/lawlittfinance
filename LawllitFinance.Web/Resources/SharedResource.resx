@@ -132,9 +132,9 @@
 
   <data name="Prof_Title" xml:space="preserve"><value>Perfil</value></data>
   <data name="Prof_MemberSince" xml:space="preserve"><value>Membro desde</value></data>
-  <data name="Prof_Nav_Info" xml:space="preserve"><value>Informações</value></data>
+  <data name="Prof_Nav_Info" xml:space="preserve"><value>Geral</value></data>
   <data name="Prof_Nav_Security" xml:space="preserve"><value>Segurança</value></data>
-  <data name="Prof_Nav_Appearance" xml:space="preserve"><value>Aparência</value></data>
+  <data name="Prof_Nav_Appearance" xml:space="preserve"><value>Preferências</value></data>
   <data name="Prof_Nav_Account" xml:space="preserve"><value>Conta</value></data>
   <data name="Prof_Info_Title" xml:space="preserve"><value>Informações pessoais</value></data>
   <data name="Prof_Security_EmailSection" xml:space="preserve"><value>E-mail</value></data>
