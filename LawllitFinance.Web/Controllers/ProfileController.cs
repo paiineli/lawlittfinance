@@ -33,16 +33,14 @@ public class ProfileController(IProfileService profileService, IStringLocalizer<
             return RedirectToAction("Index");
         }
 
-        var (user, errorKey) = await profileService.EditNameAsync(GetUserId(), editNameForm.Name);
-        if (errorKey is not null)
+        var result = await profileService.EditNameAsync(GetUserId(), editNameForm.Name);
+        if (!result.IsSuccess)
         {
-            TempData["Error"] = localizer[errorKey].Value;
+            TempData["Error"] = localizer[result.ErrorKey!].Value;
             return RedirectToAction("Index");
         }
 
-        if (user is not null)
-            await SignInAsync(user);
-
+        await SignInAsync(result.Value!);
         TempData["Success"] = localizer["Msg_NameUpdated"].Value;
         return RedirectToAction("Index");
     }
@@ -59,16 +57,14 @@ public class ProfileController(IProfileService profileService, IStringLocalizer<
             return RedirectToAction("Index", new { tab = "security" });
         }
 
-        var (user, errorKey) = await profileService.EditEmailAsync(GetUserId(), editEmailForm);
-        if (errorKey is not null)
+        var result = await profileService.EditEmailAsync(GetUserId(), editEmailForm);
+        if (!result.IsSuccess)
         {
-            TempData["Error"] = localizer[errorKey].Value;
+            TempData["Error"] = localizer[result.ErrorKey!].Value;
             return RedirectToAction("Index", new { tab = "security" });
         }
 
-        if (user is not null)
-            await SignInAsync(user);
-
+        await SignInAsync(result.Value!);
         TempData["Success"] = localizer["Msg_EmailUpdated"].Value;
         return RedirectToAction("Index", new { tab = "security" });
     }
@@ -85,10 +81,10 @@ public class ProfileController(IProfileService profileService, IStringLocalizer<
             return RedirectToAction("Index", new { tab = "security" });
         }
 
-        var errorKey = await profileService.ChangePasswordAsync(GetUserId(), changePasswordForm);
-        if (errorKey is not null)
+        var result = await profileService.ChangePasswordAsync(GetUserId(), changePasswordForm);
+        if (!result.IsSuccess)
         {
-            TempData["Error"] = localizer[errorKey].Value;
+            TempData["Error"] = localizer[result.ErrorKey!].Value;
             return RedirectToAction("Index", new { tab = "security" });
         }
 
@@ -103,11 +99,11 @@ public class ProfileController(IProfileService profileService, IStringLocalizer<
         if (!ModelState.IsValid || !Constants.ValidThemes.Contains(form.Theme))
             return BadRequest();
 
-        var user = await profileService.SaveThemeAsync(GetUserId(), form.Theme);
-        if (user is null)
+        var result = await profileService.SaveThemeAsync(GetUserId(), form.Theme);
+        if (!result.IsSuccess)
             return Unauthorized();
 
-        await SignInAsync(user);
+        await SignInAsync(result.Value!);
         return Ok();
     }
 
@@ -118,11 +114,11 @@ public class ProfileController(IProfileService profileService, IStringLocalizer<
         if (!ModelState.IsValid || !Constants.ValidFontSizes.Contains(form.FontSize))
             return BadRequest();
 
-        var user = await profileService.SaveFontSizeAsync(GetUserId(), form.FontSize);
-        if (user is null)
+        var result = await profileService.SaveFontSizeAsync(GetUserId(), form.FontSize);
+        if (!result.IsSuccess)
             return Unauthorized();
 
-        await SignInAsync(user);
+        await SignInAsync(result.Value!);
         return Ok();
     }
 
@@ -133,11 +129,11 @@ public class ProfileController(IProfileService profileService, IStringLocalizer<
         if (!ModelState.IsValid || !Constants.ValidLanguages.Contains(form.Language))
             return BadRequest();
 
-        var user = await profileService.SaveLanguageAsync(GetUserId(), form.Language);
-        if (user is null)
+        var result = await profileService.SaveLanguageAsync(GetUserId(), form.Language);
+        if (!result.IsSuccess)
             return Unauthorized();
 
-        await SignInAsync(user);
+        await SignInAsync(result.Value!);
         return Ok();
     }
 
@@ -145,10 +141,10 @@ public class ProfileController(IProfileService profileService, IStringLocalizer<
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> DeleteAccount(string? password)
     {
-        var errorKey = await profileService.DeleteAccountAsync(GetUserId(), password);
-        if (errorKey is not null)
+        var result = await profileService.DeleteAccountAsync(GetUserId(), password);
+        if (!result.IsSuccess)
         {
-            TempData["Error"] = localizer[errorKey].Value;
+            TempData["Error"] = localizer[result.ErrorKey!].Value;
             return RedirectToAction("Index", new { tab = "account" });
         }
 

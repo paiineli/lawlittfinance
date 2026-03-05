@@ -1,27 +1,26 @@
 using LawllitFinance.Data.Entities;
 using LawllitFinance.Data.Repositories.Interfaces;
-
 using LawllitFinance.Web.Services.Interfaces;
 
 namespace LawllitFinance.Web.Services;
 
 public class AuthService(IUserRepository userRepository) : IAuthService
 {
-    public async Task<(User? User, string? ErrorKey)> ValidateLoginAsync(string email, string password)
+    public async Task<Result<User>> ValidateLoginAsync(string email, string password)
     {
         var user = await userRepository.GetByEmailAsync(email);
         if (user is null || user.PasswordHash is null || !BCrypt.Net.BCrypt.Verify(password, user.PasswordHash))
-            return (null, "Msg_WrongCredentials");
+            return Result<User>.Failure("Msg_WrongCredentials");
         if (!user.EmailConfirmed)
-            return (null, "Msg_EmailNotConfirmed");
-        return (user, null);
+            return Result<User>.Failure("Msg_EmailNotConfirmed");
+        return Result<User>.Success(user);
     }
 
-    public async Task<(User? User, string? ErrorKey)> RegisterAsync(string name, string email, string password)
+    public async Task<Result<User>> RegisterAsync(string name, string email, string password)
     {
         var existingUser = await userRepository.GetByEmailAsync(email);
         if (existingUser is not null)
-            return (null, "Msg_EmailInUse");
+            return Result<User>.Failure("Msg_EmailInUse");
 
         var confirmToken = Guid.NewGuid().ToString("N");
         var user = new User
@@ -38,20 +37,20 @@ public class AuthService(IUserRepository userRepository) : IAuthService
 
         await userRepository.AddAsync(user);
         await userRepository.SaveChangesAsync();
-        return (user, null);
+        return Result<User>.Success(user);
     }
 
-    public async Task<User?> ConfirmEmailAsync(string token)
+    public async Task<Result<User>> ConfirmEmailAsync(string token)
     {
         var user = await userRepository.GetByConfirmationTokenAsync(token);
         if (user is null || user.EmailConfirmationTokenExpiry < DateTime.UtcNow)
-            return null;
+            return Result<User>.Failure("Msg_InvalidLink");
 
         user.EmailConfirmed = true;
         user.EmailConfirmationToken = null;
         user.EmailConfirmationTokenExpiry = null;
         await userRepository.SaveChangesAsync();
-        return user;
+        return Result<User>.Success(user);
     }
 
     public async Task<bool> ValidatePasswordResetTokenAsync(string token)
@@ -60,30 +59,30 @@ public class AuthService(IUserRepository userRepository) : IAuthService
         return user is not null && user.PasswordResetTokenExpiry >= DateTime.UtcNow;
     }
 
-    public async Task<(User User, string Token)?> BeginPasswordResetAsync(string email)
+    public async Task<Result<(User User, string Token)>> BeginPasswordResetAsync(string email)
     {
         var user = await userRepository.GetByEmailAsync(email);
         if (user is null || !user.EmailConfirmed)
-            return null;
+            return Result<(User, string)>.Failure("Msg_NotFound");
 
         var resetToken = Guid.NewGuid().ToString("N");
         user.PasswordResetToken = resetToken;
         user.PasswordResetTokenExpiry = DateTime.UtcNow.AddHours(1);
         await userRepository.SaveChangesAsync();
-        return (user, resetToken);
+        return Result<(User, string)>.Success((user, resetToken));
     }
 
-    public async Task<string?> ResetPasswordAsync(string token, string newPassword)
+    public async Task<Result> ResetPasswordAsync(string token, string newPassword)
     {
         var user = await userRepository.GetByPasswordResetTokenAsync(token);
         if (user is null || user.PasswordResetTokenExpiry < DateTime.UtcNow)
-            return "Msg_InvalidLink";
+            return Result.Failure("Msg_InvalidLink");
 
         user.PasswordHash = BCrypt.Net.BCrypt.HashPassword(newPassword);
         user.PasswordResetToken = null;
         user.PasswordResetTokenExpiry = null;
         await userRepository.SaveChangesAsync();
-        return null;
+        return Result.Success();
     }
 
     public async Task<User> GetOrCreateGoogleUserAsync(string googleId, string email, string name)
