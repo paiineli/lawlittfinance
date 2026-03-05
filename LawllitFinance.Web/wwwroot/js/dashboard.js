@@ -1,16 +1,14 @@
 const chartColors = ['#4ade80', '#60a5fa', '#f97316', '#f472b6', '#a78bfa', '#34d399'];
 const legendColor = '#e5e7eb';
 const fontFamily = { family: 'JetBrains Mono', size: 11 };
-const monthNames = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho',
-    'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'];
 
-function initDashboard(categoryData, trendData) {
-    if (categoryData.length > 0) buildPieChart(categoryData);
-    buildBarChart(trendData);
+function initDashboard(data) {
+    if (data.categories.length > 0) buildPieChart(data.categories, data.othersLabel);
+    buildBarChart(data.trend, data.months, data.incomeLabel, data.expensesLabel);
 }
 
-function buildPieChart(data) {
-    const collapsed = collapseCategories(data);
+function buildPieChart(categoryData, othersLabel) {
+    const collapsed = collapseCategories(categoryData, othersLabel);
     new Chart(document.getElementById('pieChart'), {
         type: 'doughnut',
         data: {
@@ -27,12 +25,12 @@ function buildPieChart(data) {
     });
 }
 
-function buildBarChart(data) {
-    if (!data || !data.length) return;
+function buildBarChart(trendData, months, incomeLabel, expensesLabel) {
+    if (!trendData || !trendData.length) return;
 
-    const labels = data.map(trend => monthNames[trend.month - 1].slice(0, 3) + '/' + String(trend.year).slice(-2));
-    const incomes = data.map(trend => trend.income);
-    const expenses = data.map(trend => trend.expenses);
+    const labels = trendData.map(trend => months[trend.month - 1].slice(0, 3) + '/' + String(trend.year).slice(-2));
+    const incomes = trendData.map(trend => trend.income);
+    const expenses = trendData.map(trend => trend.expenses);
 
     new Chart(document.getElementById('barChart'), {
         type: 'bar',
@@ -40,7 +38,7 @@ function buildBarChart(data) {
             labels,
             datasets: [
                 {
-                    label: 'Receitas',
+                    label: incomeLabel,
                     data: incomes,
                     backgroundColor: 'rgba(74, 222, 128, 0.7)',
                     borderColor: '#4ade80',
@@ -48,7 +46,7 @@ function buildBarChart(data) {
                     borderRadius: 4,
                 },
                 {
-                    label: 'Despesas',
+                    label: expensesLabel,
                     data: expenses,
                     backgroundColor: 'rgba(248, 113, 113, 0.7)',
                     borderColor: '#f87171',
@@ -83,11 +81,11 @@ function buildBarChart(data) {
     });
 }
 
-function collapseCategories(data, max = 5) {
+function collapseCategories(data, othersLabel, max = 5) {
     if (data.length <= max) return data;
     const top = data.slice(0, max);
     const othersTotal = data.slice(max).reduce((sum, category) => sum + category.value, 0);
-    return [...top, { label: 'Outros', value: othersTotal }];
+    return [...top, { label: othersLabel, value: othersTotal }];
 }
 
 function initRankingBars() {
@@ -101,6 +99,6 @@ function initRankingBars() {
     var dataElement = document.getElementById('dashboardData');
     if (!dataElement) return;
     var data = JSON.parse(dataElement.textContent);
-    initDashboard(data.categories, data.trend);
+    initDashboard(data);
     initRankingBars();
 })();

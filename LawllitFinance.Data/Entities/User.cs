@@ -15,6 +15,7 @@ public class User
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public string Theme { get; set; } = "dark";
     public string FontSize { get; set; } = "normal";
+    public string Language { get; set; } = "pt-BR";
 
     public ICollection<Category> Categories { get; set; } = [];
     public ICollection<Transaction> Transactions { get; set; } = [];

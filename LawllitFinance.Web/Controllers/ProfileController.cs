@@ -1,36 +1,22 @@
-using LawllitFinance.Data.Entities;
-using LawllitFinance.Data.Repositories.Interfaces;
 using LawllitFinance.Web.Models;
+using LawllitFinance.Web.Services.Interfaces;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using System.Globalization;
-using System.Security.Claims;
+using Microsoft.Extensions.Localization;
 
 namespace LawllitFinance.Web.Controllers;
 
 [Authorize]
-public class ProfileController(IUserRepository userRepository) : BaseController
+public class ProfileController(IProfileService profileService, IStringLocalizer<SharedResource> localizer) : BaseController
 {
     [HttpGet]
     public async Task<IActionResult> Index(string? tab)
     {
-        var userId = GetUserId();
-        var user = await userRepository.GetByIdAsync(userId);
-        if (user is null)
+        var viewModel = await profileService.GetProfileAsync(GetUserId(), tab);
+        if (viewModel is null)
             return RedirectToAction("Logout", "Auth");
-
-        var viewModel = new ProfileViewModel
-        {
-            Name        = user.Name,
-            Email       = user.Email,
-            HasPassword = user.PasswordHash is not null,
-            MemberSince = user.CreatedAt,
-            ActiveTab   = tab ?? "info",
-            Theme       = user.Theme,
-            FontSize    = user.FontSize,
-        };
 
         return View(viewModel);
     }
@@ -43,20 +29,21 @@ public class ProfileController(IUserRepository userRepository) : BaseController
         {
             TempData["Error"] = ModelState.Values
                 .SelectMany(value => value.Errors)
-                .FirstOrDefault()?.ErrorMessage ?? "Nome inválido.";
+                .FirstOrDefault()?.ErrorMessage ?? localizer["Msg_NameInvalid"].Value;
             return RedirectToAction("Index");
         }
 
-        var userId = GetUserId();
-        var user = await userRepository.GetByIdAsync(userId);
-        if (user is null)
-            return RedirectToAction("Logout", "Auth");
+        var (user, errorKey) = await profileService.EditNameAsync(GetUserId(), editNameForm.Name);
+        if (errorKey is not null)
+        {
+            TempData["Error"] = localizer[errorKey].Value;
+            return RedirectToAction("Index");
+        }
 
-        user.Name = CultureInfo.CurrentCulture.TextInfo.ToTitleCase(editNameForm.Name.Trim().ToLower());
-        await userRepository.SaveChangesAsync();
-        await SignInAsync(user);
+        if (user is not null)
+            await SignInAsync(user);
 
-        TempData["Success"] = "Nome atualizado com sucesso.";
+        TempData["Success"] = localizer["Msg_NameUpdated"].Value;
         return RedirectToAction("Index");
     }
 
@@ -68,42 +55,21 @@ public class ProfileController(IUserRepository userRepository) : BaseController
         {
             TempData["Error"] = ModelState.Values
                 .SelectMany(value => value.Errors)
-                .FirstOrDefault()?.ErrorMessage ?? "E-mail inválido.";
+                .FirstOrDefault()?.ErrorMessage ?? localizer["Msg_EmailInvalid"].Value;
             return RedirectToAction("Index", new { tab = "security" });
         }
 
-        var userId = GetUserId();
-        var user = await userRepository.GetByIdAsync(userId);
-        if (user is null)
-            return RedirectToAction("Logout", "Auth");
-
-        if (user.PasswordHash is not null &&
-            (string.IsNullOrEmpty(editEmailForm.Password) || !BCrypt.Net.BCrypt.Verify(editEmailForm.Password, user.PasswordHash)))
+        var (user, errorKey) = await profileService.EditEmailAsync(GetUserId(), editEmailForm);
+        if (errorKey is not null)
         {
-            TempData["Error"] = "Senha incorreta.";
+            TempData["Error"] = localizer[errorKey].Value;
             return RedirectToAction("Index", new { tab = "security" });
         }
 
-        var normalizedEmail = editEmailForm.Email.Trim().ToLower();
+        if (user is not null)
+            await SignInAsync(user);
 
-        if (user.Email == normalizedEmail)
-        {
-            TempData["Error"] = "O novo e-mail é igual ao atual.";
-            return RedirectToAction("Index", new { tab = "security" });
-        }
-
-        var existingUser = await userRepository.GetByEmailAsync(normalizedEmail);
-        if (existingUser is not null)
-        {
-            TempData["Error"] = "Este e-mail já está em uso.";
-            return RedirectToAction("Index", new { tab = "security" });
-        }
-
-        user.Email = normalizedEmail;
-        await userRepository.SaveChangesAsync();
-        await SignInAsync(user);
-
-        TempData["Success"] = "E-mail atualizado com sucesso.";
+        TempData["Success"] = localizer["Msg_EmailUpdated"].Value;
         return RedirectToAction("Index", new { tab = "security" });
     }
 
@@ -115,28 +81,18 @@ public class ProfileController(IUserRepository userRepository) : BaseController
         {
             TempData["Error"] = ModelState.Values
                 .SelectMany(value => value.Errors)
-                .FirstOrDefault()?.ErrorMessage ?? "Dados inválidos.";
+                .FirstOrDefault()?.ErrorMessage ?? localizer["Msg_DataInvalid"].Value;
             return RedirectToAction("Index", new { tab = "security" });
         }
 
-        var userId = GetUserId();
-        var user = await userRepository.GetByIdAsync(userId);
-        if (user is null || user.PasswordHash is null)
+        var errorKey = await profileService.ChangePasswordAsync(GetUserId(), changePasswordForm);
+        if (errorKey is not null)
         {
-            TempData["Error"] = "Operação não permitida.";
+            TempData["Error"] = localizer[errorKey].Value;
             return RedirectToAction("Index", new { tab = "security" });
         }
 
-        if (!BCrypt.Net.BCrypt.Verify(changePasswordForm.CurrentPassword, user.PasswordHash))
-        {
-            TempData["Error"] = "Senha atual incorreta.";
-            return RedirectToAction("Index", new { tab = "security" });
-        }
-
-        user.PasswordHash = BCrypt.Net.BCrypt.HashPassword(changePasswordForm.NewPassword);
-        await userRepository.SaveChangesAsync();
-
-        TempData["Success"] = "Senha alterada com sucesso.";
+        TempData["Success"] = localizer["Msg_PasswordChanged"].Value;
         return RedirectToAction("Index", new { tab = "security" });
     }
 
@@ -144,19 +100,14 @@ public class ProfileController(IUserRepository userRepository) : BaseController
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> SaveTheme(SaveThemeViewModel form)
     {
-        string[] allowed = ["dark", "light", "high-contrast"];
-        if (!ModelState.IsValid || !allowed.Contains(form.Theme))
+        if (!ModelState.IsValid || !Constants.ValidThemes.Contains(form.Theme))
             return BadRequest();
 
-        var userId = GetUserId();
-        var user = await userRepository.GetByIdAsync(userId);
+        var user = await profileService.SaveThemeAsync(GetUserId(), form.Theme);
         if (user is null)
             return Unauthorized();
 
-        user.Theme = form.Theme;
-        await userRepository.SaveChangesAsync();
         await SignInAsync(user);
-
         return Ok();
     }
 
@@ -164,19 +115,29 @@ public class ProfileController(IUserRepository userRepository) : BaseController
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> SaveFontSize(SaveFontSizeViewModel form)
     {
-        string[] allowed = ["normal", "large", "xlarge"];
-        if (!ModelState.IsValid || !allowed.Contains(form.FontSize))
+        if (!ModelState.IsValid || !Constants.ValidFontSizes.Contains(form.FontSize))
             return BadRequest();
 
-        var userId = GetUserId();
-        var user = await userRepository.GetByIdAsync(userId);
+        var user = await profileService.SaveFontSizeAsync(GetUserId(), form.FontSize);
         if (user is null)
             return Unauthorized();
 
-        user.FontSize = form.FontSize;
-        await userRepository.SaveChangesAsync();
         await SignInAsync(user);
+        return Ok();
+    }
 
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> SaveLanguage(SaveLanguageViewModel form)
+    {
+        if (!ModelState.IsValid || !Constants.ValidLanguages.Contains(form.Language))
+            return BadRequest();
+
+        var user = await profileService.SaveLanguageAsync(GetUserId(), form.Language);
+        if (user is null)
+            return Unauthorized();
+
+        await SignInAsync(user);
         return Ok();
     }
 
@@ -184,41 +145,14 @@ public class ProfileController(IUserRepository userRepository) : BaseController
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> DeleteAccount(string? password)
     {
-        var userId = GetUserId();
-        var user = await userRepository.GetByIdAsync(userId);
-        if (user is null)
-            return RedirectToAction("Logout", "Auth");
-
-        if (user.PasswordHash is not null && !BCrypt.Net.BCrypt.Verify(password ?? "", user.PasswordHash))
+        var errorKey = await profileService.DeleteAccountAsync(GetUserId(), password);
+        if (errorKey is not null)
         {
-            TempData["Error"] = "Senha incorreta.";
+            TempData["Error"] = localizer[errorKey].Value;
             return RedirectToAction("Index", new { tab = "account" });
         }
 
-        await userRepository.DeleteAsync(user);
-        await userRepository.SaveChangesAsync();
         await HttpContext.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
-
         return RedirectToAction("Index", "Home");
-    }
-
-    private async Task SignInAsync(User user)
-    {
-        var claims = new List<Claim>
-        {
-            new(ClaimTypes.NameIdentifier, user.Id.ToString()),
-            new(ClaimTypes.Name,           user.Name),
-            new(ClaimTypes.Email,          user.Email),
-            new("theme",                   user.Theme),
-            new("font_size",               user.FontSize),
-        };
-
-        var identity  = new ClaimsIdentity(claims, CookieAuthenticationDefaults.AuthenticationScheme);
-        var principal = new ClaimsPrincipal(identity);
-
-        await HttpContext.SignInAsync(
-            CookieAuthenticationDefaults.AuthenticationScheme,
-            principal,
-            new AuthenticationProperties { IsPersistent = true });
     }
 }
